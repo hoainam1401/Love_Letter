@@ -1,5 +1,5 @@
-from Love_Letter_Base.Classes.CardPile import CardPile
-from Love_Letter_Base.Classes.Player import Player
+from CardPile import CardPile
+from Player import Player
 
 
 class GameInstance:
@@ -17,7 +17,4 @@ class GameInstance:
     #     player.winningTokenCount += 1
 
     if __name__ == "__main__":
-        cardPile = CardPile(4)
-        cardPile.printAll()
-        # cardPile = CardPile(4)
-        # cardPile.printAll()
+        cardPile = CardPile()

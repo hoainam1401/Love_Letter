@@ -1,4 +1,4 @@
-from Love_Letter_Base.Classes.Card_Logic.Card import Card
+from Card import Card
 
 
 class Guard(Card):
@@ -12,5 +12,5 @@ class Guard(Card):
     def __init__(self):
         super().__init__()
 
-    def play(player1, player2):
+    def play(self, player1, player2):
         pass
