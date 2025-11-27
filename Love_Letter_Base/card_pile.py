@@ -1,13 +1,5 @@
 import random
-from Card import Card
-from Baron import Baron
-from Countess import Countess
-from Handmaid import Handmaid
-from King import King
-from Priest import Priest
-from Guard import Guard
-from Prince import Prince
-from Princess import Princess
+from card import Card
 
 
 class CardPile:
@@ -25,18 +17,21 @@ class CardPile:
         # for i in range(guardCount):
 
         for i in range(5):
-            self.cardList.append(Guard())
+            self.cardList.append(Card("Guard"))
         for i in range(2):
-            self.cardList.append(Priest())
-            self.cardList.append(Baron())
-            self.cardList.append(Handmaid())
-            self.cardList.append(Prince())
-        self.cardList.append(King())
-        self.cardList.append(Countess())
-        self.cardList.append(Princess())
+            self.cardList.append(Card("Priest"))
+            self.cardList.append(Card("Baron"))
+            self.cardList.append(Card("Handmaid"))
+            self.cardList.append(Card("Prince"))
+        self.cardList.append(Card("King"))
+        self.cardList.append(Card("Countess"))
+        self.cardList.append(Card("Princess"))
         random.shuffle(self.cardList)
         print("Card pile initiated:")
         self.printAll()
+
+    def draw(self):
+        return self.cardList.pop()
 
     def printAll(self):
         if len(self.cardList) > 0:

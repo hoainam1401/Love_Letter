@@ -1,5 +1,5 @@
-from CardPile import CardPile
-from Player import Player
+from card_pile import CardPile
+from player import Player
 
 
 class GameInstance:
