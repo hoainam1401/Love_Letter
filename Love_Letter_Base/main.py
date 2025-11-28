@@ -10,6 +10,7 @@ pygame.init()
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Love Letter")
 
+
 def main():
     run = True
     clock = pygame.time.Clock()
@@ -19,5 +20,6 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
+
 
 main()
