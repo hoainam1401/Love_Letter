@@ -74,19 +74,19 @@
 - GDC Talks on card game design
 
 #### Love Letter Game Rules (CRITICAL - Both team members)
-- [ ] Understand all 8 card types and their effects:
-  - [ ] Guard (5 cards, value 1): Guess opponent's card
-  - [ ] Priest (2 cards, value 2): Look at opponent's hand
-  - [ ] Baron (2 cards, value 3): Compare hands, lower loses
-  - [ ] Handmaid (2 cards, value 4): Protection until next turn
-  - [ ] Prince (2 cards, value 5): Force discard and draw
-  - [ ] King (1 card, value 6): Trade hands with opponent
-  - [ ] Countess (1 card, value 7): Must discard if holding King/Prince
-  - [ ] Princess (1 card, value 8): Lose if discarded
-- [ ] Game flow and turn structure
-- [ ] Win conditions (last player standing or highest card)
-- [ ] Round and game scoring
-- [ ] 2-4 player rules
+- [x] Understand all 8 card types and their effects:
+  - [x] Guard (5 cards, value 1): Guess opponent's card
+  - [x] Priest (2 cards, value 2): Look at opponent's hand
+  - [x] Baron (2 cards, value 3): Compare hands, lower loses
+  - [x] Handmaid (2 cards, value 4): Protection until next turn
+  - [x] Prince (2 cards, value 5): Force discard and draw
+  - [x] King (1 card, value 6): Trade hands with opponent
+  - [x] Countess (1 card, value 7): Must discard if holding King/Prince
+  - [x] Princess (1 card, value 8): Lose if discarded
+- [x] Game flow and turn structure
+- [x] Win conditions (last player standing or highest card)
+- [x] Round and game scoring
+- [x] 2-4 player rules
 
 **Resources:**
 - Official rulebook (PDF available online)
