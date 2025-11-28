@@ -1,4 +1,4 @@
-import pygame
+import pygame  # type: ignore
 import sys
 
 FPS = 60
