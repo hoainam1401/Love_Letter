@@ -3,10 +3,7 @@ from card import Card
 
 
 class CardPile:
-    # Base game will have 16 / 14 cards, based on the total player count
-    # If the game has less than 4 players, only 5 "Guard" cards are in the game,
-    # else it has in total 8 "Guard" cards
-
+    # Base game will have 16 cards
     cardList: list[Card] = []
 
     # totalCards: int = 0

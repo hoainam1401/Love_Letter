@@ -5,3 +5,6 @@ class Player:
     hasHandmaid: bool = False
     finalPoint: int = 0
     winningTokenCount: int = 0
+
+    def __init__(self, name: str):
+        self.name = name
