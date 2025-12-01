@@ -10,6 +10,7 @@ class GameInstance:
     currPlayer: Player  # current "Player" in round
     currPlayerIndex: int  # position of "currPlayer"
     playerCount: int
+    alivePlayerCount: int
 
     # these are avaiable in extended edition
     # jesterPair: tuple
@@ -21,22 +22,83 @@ class GameInstance:
     # chosenPlayerCount = 0
 
     def __init__(self, nameList: list[str]):
+        print("----------------------------------------")
+        print("---------WELCOME TO LOVE LETTER---------")
+        print("----------------------------------------")
         for name in nameList:
             self.playerList.append(Player(name))
         self.printPlayers()
         self.playerCount = len(nameList)
+        self.alivePlayerCount = len(nameList)
         self.cardPile = CardPile()
         self.currPlayerIndex = random.choice(range(self.playerCount))
         self.currPlayer = self.playerList[self.currPlayerIndex]
-        print(f"Remaining cards are {self.remainingCount()}")
         self.deal()
-        print(f"Remaining cards are {self.remainingCount()}")
+        self.startGame()
 
-    def play(self, playedCardPosition: int, chosenPlayer: Player, guessedNum: int):
+    # -------------- GAME ROUND LOGIC ---------------
+
+    # game runs based on user inputs in terminal
+    def startGame(self):
+        print("Game started!")
+        while not self.isEndGame():
+            currPlayer = self.currPlayer
+            print(f"\nCurrent player is {currPlayer.name}")
+            print(f"You have: {currPlayer.showCards()}")
+            play: str = "-1"
+            target: str = "-1"
+            guessNum: str = "-1"
+            self.printPlayerHands()
+            # receive parameters through user input
+            while int(play) not in range(1, 3):
+                play = input("\nWhich one you want to play? 1 or 2: ")
+            if (
+                currPlayer.hand[int(play) - 1].name != "Handmaid"
+                and currPlayer.hand[int(play) - 1].name != "Countess"
+                and currPlayer.hand[int(play) - 1].name != "Princess"
+            ):
+                while int(target) not in range(1, self.playerCount + 1):
+                    target = input(
+                        f"Which player you wanna choose? Enter from 1 to {self.playerCount}: "
+                    )
+                while self.playerList[int(target) - 1].hasHandmaid:
+                    target = input(
+                        f"This player is protected, choose another player from 1 to {self.playerCount}: "
+                    )
+                while self.playerList[int(target) - 1].isKO:
+                    target = input(
+                        f"This player has been eliminated, choose another player from 1 to {self.playerCount}: "
+                    )
+            if currPlayer.hand[int(play) - 1].name == "Guard":
+                while int(guessNum) not in range(2, 9):
+                    guessNum = input(
+                        f"Which number would you like to guess? Enter from 2 to 8: "
+                    )
+            self.play(int(play) - 1, int(target) - 1, int(guessNum))
+            self.nextPlayer()
+
+    def isEndGame(self):
+        winner = Player("temp")
+        if self.alivePlayerCount == 1:
+            for player in self.playerList:
+                if not player.isKO:
+                    winner = player
+        if len(self.cardPile.cardList) < 2:
+            max = 0
+            for player in self.playerList:
+                if not player.isKO and player.hand[0].val > max:
+                    max = player.hand[0].val
+                    winner = player
+        if self.alivePlayerCount == 1 or len(self.cardPile.cardList) < 2:
+            print(f"{winner.name} is the winner!")
+            return True
+
+    def play(self, playedCardPosition: int, chosenPlayerPosition: int, guessedNum: int):
+        chosenPlayer = self.playerList[chosenPlayerPosition]
         playedCard: Card = self.currPlayer.hand[playedCardPosition]
         self.currPlayer.hand.remove(playedCard)
         print(
-            f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer.name} and guessed {guessedNum}"
+            f"\nPlayer {self.currPlayer.name} has played {playedCard.name} {f"towards {chosenPlayer.name}" if chosenPlayerPosition!=-2 else ""} {f"and guessed {guessedNum}" if guessedNum!="-1" else ""}"
         )
         match playedCard.name:
             case "Guard":
@@ -58,7 +120,6 @@ class GameInstance:
 
     def draw(self, player: Player):
         player.hand.append(self.cardPile.draw())
-        print(f"Player '{player.name}' has {player.showCards()} ")
 
     def deal(self):
         for player in self.playerList:
@@ -67,16 +128,21 @@ class GameInstance:
         # self.printPlayerHands()
 
     def nextPlayer(self):
-        self.currPlayerIndex = self.currPlayerIndex + 1 % self.playerCount
+        # print(f"current index: {self.currPlayerIndex}")
+        # print(f"new index: {(self.currPlayerIndex + 1) % self.playerCount}")
+        self.currPlayerIndex = (self.currPlayerIndex + 1) % self.playerCount
         self.currPlayer = self.playerList[self.currPlayerIndex]
-        self.currPlayer.hasHandmaid = False
+        while self.currPlayer.isKO:
+            self.currPlayerIndex = (self.currPlayerIndex + 1) % self.playerCount
+            self.currPlayer = self.playerList[self.currPlayerIndex]
+            self.currPlayer.hasHandmaid = False
         self.draw(self.currPlayer)
 
     def award(self, player: Player):
         player.winningTokenCount += 1
 
     def printPlayers(self):
-        print("Players in this game are:")
+        print("\nPlayers in this game are:")
         s = ""
         for player in self.playerList:
             s += player.name + ", "
@@ -84,8 +150,10 @@ class GameInstance:
 
     def printPlayerHands(self):
         print("Player hands are:")
-        for player in self.playerList:
-            print(f"{player.name} has {player.showCards()}")
+        for index, player in enumerate(self.playerList):
+            print(
+                f"({index+1}) {player.name} has {player.showCards()}{"(is protected)" if player.hasHandmaid else ""}{"(is KO)" if player.isKO else ""}"
+            )
 
     def remainingCount(self):
         return len(self.cardPile.cardList)
@@ -96,8 +164,10 @@ class GameInstance:
     # guess another player's card, if correct,
     # that player is knocked out of the round
     def eliminate(self, chosenPlayer: Player, guessedNum: int):
-        if guessedNum == chosenPlayer.hand[0]:
+        if guessedNum == chosenPlayer.hand[0].val:
             self.KO(chosenPlayer)
+        else:
+            print("Guess not correct!")
 
     # for Priest Card
     # peek another player's hand
@@ -124,13 +194,14 @@ class GameInstance:
     # their card and draw a new one
     def discard(self, chosenPlayer: Player):
         chosenPlayer.hand = []
+        self.draw(chosenPlayer)
 
     # for King Card
     # current player swaps hand with another player
     def swap(self, currPlayer: Player, chosenPlayer: Player):
-        temp = currPlayer.hand[0]
-        currPlayer.hand = chosenPlayer.hand
-        chosenPlayer.hand[0] = temp
+        temp = currPlayer.hand.copy()
+        currPlayer.hand = chosenPlayer.hand.copy()
+        chosenPlayer.hand = temp
 
     # for Countess Card
     # must discard if card "Prince" or "King"
@@ -140,14 +211,14 @@ class GameInstance:
     def KO(self, chosenPlayer: Player):
         chosenPlayer.isKO = True
         print(f"Player {chosenPlayer.name} is out of the round!")
+        self.alivePlayerCount -= 1
 
 
 # play test
 if __name__ == "__main__":
     gameInstance = GameInstance(["A", "B", "C"])
-    gameInstance.printPlayerHands()
-    gameInstance.play(
-        1,
-        gameInstance.playerList[random.choice([0, 1, 2])],
-        random.choice([1, 2, 3, 4, 5, 6, 7, 8]),
-    )
+    # gameInstance.play(
+    #     1,
+    #     gameInstance.playerList[random.choice([0, 1, 2])],
+    #     random.choice([1, 2, 3, 4, 5, 6, 7, 8]),
+    # )

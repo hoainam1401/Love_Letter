@@ -24,8 +24,8 @@ class CardPile:
         self.cardList.append(Card("Countess"))
         self.cardList.append(Card("Princess"))
         random.shuffle(self.cardList)
-        print("Card pile initiated:")
-        self.printAll()
+        # print("Card pile initiated:")
+        # self.printAll()
 
     def draw(self):
         return self.cardList.pop()
