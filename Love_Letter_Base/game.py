@@ -25,6 +25,11 @@ class GameInstance:
         print("----------------------------------------")
         print("---------WELCOME TO LOVE LETTER---------")
         print("----------------------------------------")
+        if len(nameList) < 2:
+            raise ValueError("Game requires at least 2 players")
+        if len(nameList) > 4:
+            raise ValueError("Game supports maximum 4 players")
+
         for name in nameList:
             self.playerList.append(Player(name))
         self.printPlayers()

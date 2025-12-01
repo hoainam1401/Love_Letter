@@ -2,12 +2,12 @@ from card import Card
 
 
 class Player:
-    name: str = "Player 1"
-    hand: list[Card] = []
-    isKO: bool = False
-    hasHandmaid: bool = False
-    finalPoint: int = 0
-    winningTokenCount: int = 0
+    name: str
+    hand: list[Card]
+    isKO: bool
+    hasHandmaid: bool
+    finalPoint: int
+    winningTokenCount: int
 
     def __init__(self, name: str):
         self.name = name
