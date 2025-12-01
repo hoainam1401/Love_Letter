@@ -99,29 +99,41 @@ class GameInstance:
             return True
 
     def play(self, playedCardPosition: int, chosenPlayerPosition: int, guessedNum: int):
-        chosenPlayer = self.playerList[chosenPlayerPosition]
         playedCard: Card = self.currPlayer.hand[playedCardPosition]
         self.currPlayer.hand.remove(playedCard)
-        print(
-            f"\nPlayer {self.currPlayer.name} has played {playedCard.name} {f"towards {chosenPlayer.name}" if chosenPlayerPosition!=-2 else ""} {f"and guessed {guessedNum}" if guessedNum!="-1" else ""}"
-        )
-        match playedCard.name:
-            case "Guard":
-                self.eliminate(chosenPlayer, guessedNum)
-            case "Priest":
-                self.peekHand(chosenPlayer)
-            case "Baron":
-                self.compare(self.currPlayer, chosenPlayer)
-            case "Handmaid":
-                self.protect(self.currPlayer)
-            case "Prince":
-                self.discard(chosenPlayer)
-            case "King":
-                self.swap(self.currPlayer, chosenPlayer)
-            case "Countess":
-                pass
-            case "Princess":
-                self.KO(self.currPlayer)
+        
+        # Print appropriate message based on card type
+        if playedCard.name in ["Handmaid", "Countess", "Princess"]:
+            print(f"Player {self.currPlayer.name} has played {playedCard.name}")
+        elif playedCard.name == "Guard":
+            chosenPlayer = self.playerList[chosenPlayerPosition]
+            print(f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer.name} and guessed {guessedNum}")
+        else:
+            chosenPlayer = self.playerList[chosenPlayerPosition]
+            print(f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer.name}")
+        
+        # Execute card effect
+        if playedCard.name == "Guard":
+            chosenPlayer = self.playerList[chosenPlayerPosition]
+            self.eliminate(chosenPlayer, guessedNum)
+        elif playedCard.name == "Priest":
+            chosenPlayer = self.playerList[chosenPlayerPosition]
+            self.peekHand(chosenPlayer)
+        elif playedCard.name == "Baron":
+            chosenPlayer = self.playerList[chosenPlayerPosition]
+            self.compare(self.currPlayer, chosenPlayer)
+        elif playedCard.name == "Handmaid":
+            self.protect(self.currPlayer)
+        elif playedCard.name == "Prince":
+            chosenPlayer = self.playerList[chosenPlayerPosition]
+            self.discard(chosenPlayer)
+        elif playedCard.name == "King":
+            chosenPlayer = self.playerList[chosenPlayerPosition]
+            self.swap(self.currPlayer, chosenPlayer)
+        elif playedCard.name == "Countess":
+            pass
+        elif playedCard.name == "Princess":
+            self.KO(self.currPlayer)
 
     def draw(self, player: Player):
         player.hand.append(self.cardPile.draw())
@@ -156,8 +168,10 @@ class GameInstance:
     def printPlayerHands(self):
         print("Player hands are:")
         for index, player in enumerate(self.playerList):
+            protected = "(is protected)" if player.hasHandmaid else ""
+            ko = "(is KO)" if player.isKO else ""
             print(
-                f"({index+1}) {player.name} has {player.showCards()}{"(is protected)" if player.hasHandmaid else ""}{"(is KO)" if player.isKO else ""}"
+                f"({index+1}) {player.name} has {player.showCards()}{protected}{ko}"
             )
 
     def remainingCount(self):
