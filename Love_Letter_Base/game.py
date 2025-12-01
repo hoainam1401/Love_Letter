@@ -101,17 +101,21 @@ class GameInstance:
     def play(self, playedCardPosition: int, chosenPlayerPosition: int, guessedNum: int):
         playedCard: Card = self.currPlayer.hand[playedCardPosition]
         self.currPlayer.hand.remove(playedCard)
-        
+
         # Print appropriate message based on card type
         if playedCard.name in ["Handmaid", "Countess", "Princess"]:
             print(f"Player {self.currPlayer.name} has played {playedCard.name}")
         elif playedCard.name == "Guard":
             chosenPlayer = self.playerList[chosenPlayerPosition]
-            print(f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer.name} and guessed {guessedNum}")
+            print(
+                f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer.name} and guessed {guessedNum}"
+            )
         else:
             chosenPlayer = self.playerList[chosenPlayerPosition]
-            print(f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer.name}")
-        
+            print(
+                f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer.name}"
+            )
+
         # Execute card effect
         if playedCard.name == "Guard":
             chosenPlayer = self.playerList[chosenPlayerPosition]
@@ -138,6 +142,8 @@ class GameInstance:
     def draw(self, player: Player):
         player.hand.append(self.cardPile.draw())
 
+    # After starting game, deal for each player 1 card,
+    # the first player gets extra 1 card
     def deal(self):
         for player in self.playerList:
             self.draw(player)
@@ -170,9 +176,7 @@ class GameInstance:
         for index, player in enumerate(self.playerList):
             protected = "(is protected)" if player.hasHandmaid else ""
             ko = "(is KO)" if player.isKO else ""
-            print(
-                f"({index+1}) {player.name} has {player.showCards()}{protected}{ko}"
-            )
+            print(f"({index+1}) {player.name} has {player.showCards()}{protected}{ko}")
 
     def remainingCount(self):
         return len(self.cardPile.cardList)
