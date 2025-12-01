@@ -32,11 +32,21 @@ SMALL_FONT = pygame.font.Font(None, 24)
 CARD_WIDTH = 100
 CARD_HEIGHT = 140
 
+
 # Load card images
 def load_card_images():
     card_images = {}
-    card_names = ["Guard", "Priest", "Baron", "Handmaid", "Prince", "King", "Countess", "Princess"]
-    
+    card_names = [
+        "Guard",
+        "Priest",
+        "Baron",
+        "Handmaid",
+        "Prince",
+        "King",
+        "Countess",
+        "Princess",
+    ]
+
     for name in card_names:
         img_path = f"images/{name}.png"
         if os.path.exists(img_path):
@@ -49,21 +59,24 @@ def load_card_images():
             pygame.draw.rect(surf, BLACK, surf.get_rect(), 2)
             font = pygame.font.Font(None, 20)
             text = font.render(name, True, BLACK)
-            text_rect = text.get_rect(center=(CARD_WIDTH//2, CARD_HEIGHT//2))
+            text_rect = text.get_rect(center=(CARD_WIDTH // 2, CARD_HEIGHT // 2))
             surf.blit(text, text_rect)
             card_images[name] = surf
-    
+
     # Load card back
     back_path = "images/Back.png"
     if os.path.exists(back_path):
-        card_images["Back"] = pygame.transform.scale(pygame.image.load(back_path), (CARD_WIDTH, CARD_HEIGHT))
+        card_images["Back"] = pygame.transform.scale(
+            pygame.image.load(back_path), (CARD_WIDTH, CARD_HEIGHT)
+        )
     else:
         surf = pygame.Surface((CARD_WIDTH, CARD_HEIGHT))
         surf.fill(DARK_BROWN)
         pygame.draw.rect(surf, BLACK, surf.get_rect(), 2)
         card_images["Back"] = surf
-    
+
     return card_images
+
 
 CARD_IMAGES = load_card_images()
 
@@ -194,9 +207,7 @@ def draw_game_screen(game_instance):
         status = (
             "KNOCKED OUT"
             if player.isKO
-            else "Protected"
-            if player.hasHandmaid
-            else "Active"
+            else "Protected" if player.hasHandmaid else "Active"
         )
         status_surface = SMALL_FONT.render(status, True, BLACK)
         status_rect = status_surface.get_rect(center=(x + box_width // 2, y + 55))
