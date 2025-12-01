@@ -1,6 +1,4 @@
 from abc import abstractmethod
-from enum import Enum
-from player import Player
 
 
 class Card:
