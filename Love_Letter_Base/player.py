@@ -18,7 +18,7 @@ class Player:
         self.winningTokenCount: int = 0
 
     def showCards(self):
-        s = ""
+        s: str = ""
         for card in self.hand:
             s += card.name + " "
         return s

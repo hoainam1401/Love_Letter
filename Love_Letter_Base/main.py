@@ -7,7 +7,6 @@ WIDTH = 1000
 HEIGHT = 800
 
 pygame.init()
-
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Love Letter")
 

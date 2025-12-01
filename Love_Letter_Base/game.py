@@ -142,6 +142,8 @@ class GameInstance:
     def draw(self, player: Player):
         player.hand.append(self.cardPile.draw())
 
+    # After starting game, deal for each player 1 card,
+    # the first player gets extra 1 card
     def deal(self):
         for player in self.playerList:
             self.draw(player)
