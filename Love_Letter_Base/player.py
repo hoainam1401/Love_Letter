@@ -1,6 +1,9 @@
+from card import Card
+
+
 class Player:
     name: str
-    hand: list
+    hand: list[Card]
     isKO: bool
     hasHandmaid: bool
     finalPoint: int
@@ -8,8 +11,14 @@ class Player:
 
     def __init__(self, name: str):
         self.name = name
-        self.hand = []
-        self.isKO = False
-        self.hasHandmaid = False
-        self.finalPoint = 0
-        self.winningTokenCount = 0
+        self.hand: list[Card] = []
+        self.isKO: bool = False
+        self.hasHandmaid: bool = False
+        self.finalPoint: int = 0
+        self.winningTokenCount: int = 0
+
+    def showCards(self):
+        s = ""
+        for card in self.hand:
+            s += card.name + " "
+        return s
