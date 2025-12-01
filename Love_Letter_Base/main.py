@@ -154,8 +154,8 @@ def draw_game_screen(game_instance):
 
     # Title bar
     title_bar = pygame.Rect(0, 0, WIDTH, 80)
-    pygame.draw.rect(WIN, CURRENT_LINE, title_bar)
-    pygame.draw.rect(WIN, PINK, pygame.Rect(0, 0, WIDTH, 80), 3)
+    pygame.draw.rect(WIN, CURRENT_LINE, title_bar, border_radius=0)
+    pygame.draw.rect(WIN, PINK, pygame.Rect(0, 0, WIDTH, 80), 2, border_radius=0)
     title = TEXT_FONT.render("Love Letter", True, PINK)
     WIN.blit(title, (20, 25))
 
@@ -205,8 +205,8 @@ def draw_game_screen(game_instance):
         else:
             box_color = GRAY
 
-        pygame.draw.rect(WIN, box_color, box_rect)
-        pygame.draw.rect(WIN, PINK, box_rect, 3)
+        pygame.draw.rect(WIN, box_color, box_rect, border_radius=10)
+        pygame.draw.rect(WIN, PINK, box_rect, 2, border_radius=10)
 
         # Player name
         name_surface = TEXT_FONT.render(player.name, True, FOREGROUND)
@@ -239,12 +239,16 @@ def draw_game_screen(game_instance):
 
     # Draw current player's hand at bottom center with actual card images
     if len(game_instance.currPlayer.hand) > 0:
-        hand_y = HEIGHT - 180
+        hand_y = HEIGHT - 160
 
-        # Background for hand area
-        hand_bg = pygame.Rect(WIDTH // 2 - 300, hand_y - 20, 600, 170)
-        pygame.draw.rect(WIN, CURRENT_LINE, hand_bg)
-        pygame.draw.rect(WIN, PURPLE, hand_bg, 3)
+        # Background for hand area - sized for 2 cards
+        hand_bg_width = 280
+        hand_bg_height = 150
+        hand_bg = pygame.Rect(
+            WIDTH // 2 - hand_bg_width // 2, hand_y - 20, hand_bg_width, hand_bg_height
+        )
+        pygame.draw.rect(WIN, CURRENT_LINE, hand_bg, border_radius=10)
+        pygame.draw.rect(WIN, PURPLE, hand_bg, 2, border_radius=10)
 
         hand_label = TEXT_FONT.render("Your Hand", True, PINK)
         WIN.blit(hand_label, (WIDTH // 2 - 70, hand_y - 15))
@@ -260,9 +264,9 @@ def draw_game_screen(game_instance):
             # Draw card image
             WIN.blit(CARD_IMAGES[card.name], (card_x, card_y))
 
-            # Draw card border
+            # Draw card border with rounded corners
             card_rect = pygame.Rect(card_x, card_y, CARD_WIDTH, CARD_HEIGHT)
-            pygame.draw.rect(WIN, PINK, card_rect, 3)
+            pygame.draw.rect(WIN, PINK, card_rect, 2, border_radius=8)
 
             # Draw card name below
             card_name = SMALL_FONT.render(f"{card.name} ({card.val})", True, CYAN)
