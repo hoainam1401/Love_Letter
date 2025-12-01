@@ -19,6 +19,11 @@ class GameInstance:
     # chosenPlayerCount = 0
 
     def __init__(self, nameList: list[str]):
+        if len(nameList) < 2:
+            raise ValueError("Game requires at least 2 players")
+        if len(nameList) > 4:
+            raise ValueError("Game supports maximum 4 players")
+        
         for name in nameList:
             self.playerList.append(Player(name))
         self.printPlayers()

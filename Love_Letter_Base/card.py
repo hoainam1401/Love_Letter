@@ -10,31 +10,30 @@ class Card:
 
     def __init__(self, name):
         self.name = name
-        match self.name:
-            case "Guard":
-                self.val = 1
-                self.img = f"images/{self.name}.png"
-            case "Priest":
-                self.val = 2
-                self.img = f"images/{self.name}.png"
-            case "Baron":
-                self.val = 3
-                self.img = f"images/{self.name}.png"
-            case "Handmaid":
-                self.val = 4
-                self.img = f"images/{self.name}.png"
-            case "Prince":
-                self.val = 5
-                self.img = f"images/{self.name}.png"
-            case "King":
-                self.val = 6
-                self.img = f"images/{self.name}.png"
-            case "Countess":
-                self.val = 7
-                self.img = f"images/{self.name}.png"
-            case "Princess":
-                self.val = 8
-                self.img = f"images/{self.name}.png"
+        if self.name == "Guard":
+            self.val = 1
+            self.img = f"images/{self.name}.png"
+        elif self.name == "Priest":
+            self.val = 2
+            self.img = f"images/{self.name}.png"
+        elif self.name == "Baron":
+            self.val = 3
+            self.img = f"images/{self.name}.png"
+        elif self.name == "Handmaid":
+            self.val = 4
+            self.img = f"images/{self.name}.png"
+        elif self.name == "Prince":
+            self.val = 5
+            self.img = f"images/{self.name}.png"
+        elif self.name == "King":
+            self.val = 6
+            self.img = f"images/{self.name}.png"
+        elif self.name == "Countess":
+            self.val = 7
+            self.img = f"images/{self.name}.png"
+        elif self.name == "Princess":
+            self.val = 8
+            self.img = f"images/{self.name}.png"
 
     # for Guard Card
     # guess another player's card, if correct,
