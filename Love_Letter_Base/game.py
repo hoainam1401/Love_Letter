@@ -45,7 +45,7 @@ class GameInstance:
 
     # game runs based on user inputs in terminal
     def startGame(self):
-        print("Game started!")
+        print("\nGame started!")
         while not self.isEndGame():
             currPlayer = self.currPlayer
             print(f"\nCurrent player is {currPlayer.name}")
@@ -54,54 +54,76 @@ class GameInstance:
             target: str = "-1"
             guessNum: str = "-1"
             self.printPlayerHands()
+
             # receive parameters through user input
-            while int(play) not in range(1, 3):
-                play = input("\nWhich one you want to play? 1 or 2: ")
-            if (
-                currPlayer.hand[int(play) - 1].name != "Handmaid"
-                and currPlayer.hand[int(play) - 1].name != "Countess"
-                and currPlayer.hand[int(play) - 1].name != "Princess"
-            ):
-                while int(target) not in range(1, self.playerCount + 1):
-                    target = input(
-                        f"Which player you wanna choose? Enter from 1 to {self.playerCount}: "
-                    )
-                while self.playerList[int(target) - 1].hasHandmaid:
-                    target = input(
-                        f"This player is protected, choose another player from 1 to {self.playerCount}: "
-                    )
-                while self.playerList[int(target) - 1].isKO:
-                    target = input(
-                        f"This player has been eliminated, choose another player from 1 to {self.playerCount}: "
-                    )
-            if currPlayer.hand[int(play) - 1].name == "Guard":
-                while int(guessNum) not in range(2, 9):
-                    guessNum = input(
-                        f"Which number would you like to guess? Enter from 2 to 8: "
-                    )
-            self.play(int(play) - 1, int(target) - 1, int(guessNum))
+
+            # len(self.currPlayer.hand) == 1 happens when the current Player
+            # draws a "Countess" card, while having a "King" or "Prince" card,
+            # in which "Countess" card would be forced to be played,
+            # else the player is in control of which card to be played
+            if len(self.currPlayer.hand) > 1:
+                while int(play) not in range(1, 3):
+                    play = input("\nWhich one you want to play? 1 or 2: ")
+                if (
+                    currPlayer.hand[int(play) - 1].name != "Handmaid"
+                    and currPlayer.hand[int(play) - 1].name != "Countess"
+                    and currPlayer.hand[int(play) - 1].name != "Princess"
+                ):
+                    while int(target) not in range(1, self.playerCount + 1):
+                        target = input(
+                            f"Which player you wanna choose? Enter from 1 to {self.playerCount}: "
+                        )
+                    while self.playerList[int(target) - 1].isProtected:
+                        target = input(
+                            f"This player is protected, choose another player from 1 to {self.playerCount}: "
+                        )
+                    while self.playerList[int(target) - 1].isKO:
+                        target = input(
+                            f"This player has been eliminated, choose another player from 1 to {self.playerCount}: "
+                        )
+                if currPlayer.hand[int(play) - 1].name == "Guard":
+                    while int(guessNum) not in range(2, 9):
+                        guessNum = input(
+                            f"Which number would you like to guess? Enter from 2 to 8: "
+                        )
+                self.play(int(play) - 1, int(target) - 1, int(guessNum))
             self.nextPlayer()
 
     def isEndGame(self):
-        winner = Player("temp")
+        winner: list[Player] = []
+        # winner is the sole survivor
         if self.alivePlayerCount == 1:
             for player in self.playerList:
                 if not player.isKO:
-                    winner = player
+                    winner.append(player)
+        # calculate who has the highest score
+        # if multiple players have same score,
+        # there would be multiple winners
         if len(self.cardPile.cardList) < 2:
             max = 0
             for player in self.playerList:
                 if not player.isKO and player.hand[0].val > max:
                     max = player.hand[0].val
-                    winner = player
+                    winner.append(player)
+            for player in self.playerList:
+                if not player.isKO and player.hand[0].val == max:
+                    winner.append(player)
+        # annouce the winner(s)
         if self.alivePlayerCount == 1 or len(self.cardPile.cardList) < 2:
-            print(f"{winner.name} is the winner!")
+            if len(winner) > 1:
+                s = ""
+                for player in winner:
+                    s += f"{player.name} "
+                print(f"{s} are the winner!")
+            else:
+                print(f"{winner[0].name} is the winner!")
             return True
 
+    # play a card with extra parameters, provide infomations
+    # to execute card actions correctly
     def play(self, playedCardPosition: int, chosenPlayerPosition: int, guessedNum: int):
         playedCard: Card = self.currPlayer.hand[playedCardPosition]
-        self.currPlayer.hand.remove(playedCard)
-
+        self.currPlayer.discard(playedCard)
         # Print appropriate message based on card type
         if playedCard.name in ["Handmaid", "Countess", "Princess"]:
             print(f"Player {self.currPlayer.name} has played {playedCard.name}")
@@ -129,18 +151,33 @@ class GameInstance:
         elif playedCard.name == "Handmaid":
             self.protect(self.currPlayer)
         elif playedCard.name == "Prince":
+            self.currPlayer.hasPrince -= 1
             chosenPlayer = self.playerList[chosenPlayerPosition]
             self.discard(chosenPlayer)
         elif playedCard.name == "King":
+            self.currPlayer.hasKing -= 1
             chosenPlayer = self.playerList[chosenPlayerPosition]
             self.swap(self.currPlayer, chosenPlayer)
         elif playedCard.name == "Countess":
-            pass
+            self.currPlayer.hasCountess -= 1
         elif playedCard.name == "Princess":
             self.KO(self.currPlayer)
 
     def draw(self, player: Player):
-        player.hand.append(self.cardPile.draw())
+        drawnCard = self.cardPile.draw()
+        print(f"\nPlayer {player.name} has drawn {drawnCard.name}")
+        if drawnCard.name == "Prince":
+            player.hasPrince += 1
+        elif drawnCard.name == "King":
+            player.hasKing += 1
+        elif drawnCard.name == "Countess":
+            player.hasCountess += 1
+        player.hand.append(drawnCard)
+        if player.hasCountess > 0 and (player.hasPrince > 0 or player.hasKing > 0):
+            for i in [0, 1]:
+                if player.hand[i].name == "Countess":
+                    self.play(i, self.currPlayerIndex, -1)
+                    break
 
     # After starting game, deal for each player 1 card,
     # the first player gets extra 1 card
@@ -158,7 +195,7 @@ class GameInstance:
         while self.currPlayer.isKO:
             self.currPlayerIndex = (self.currPlayerIndex + 1) % self.playerCount
             self.currPlayer = self.playerList[self.currPlayerIndex]
-            self.currPlayer.hasHandmaid = False
+        self.currPlayer.isProtected = False
         self.draw(self.currPlayer)
 
     def award(self, player: Player):
@@ -174,7 +211,7 @@ class GameInstance:
     def printPlayerHands(self):
         print("Player hands are:")
         for index, player in enumerate(self.playerList):
-            protected = "(is protected)" if player.hasHandmaid else ""
+            protected = "(is protected)" if player.isProtected else ""
             ko = "(is KO)" if player.isKO else ""
             print(f"({index+1}) {player.name} has {player.showCards()}{protected}{ko}")
 
@@ -210,14 +247,17 @@ class GameInstance:
     # protect current player in one round
     # cannot be targeted by any card
     def protect(self, currPlayer: Player):
-        currPlayer.hasHandmaid = True
+        currPlayer.isProtected = True
 
     # for Prince Card
     # choose a player (including self) to discard
     # their card and draw a new one
     def discard(self, chosenPlayer: Player):
-        chosenPlayer.hand = []
-        self.draw(chosenPlayer)
+        isKO = chosenPlayer.discard(chosenPlayer.hand[0])
+        if not chosenPlayer.isKO:
+            self.draw(chosenPlayer)
+        else:
+            self.KO(chosenPlayer)
 
     # for King Card
     # current player swaps hand with another player
