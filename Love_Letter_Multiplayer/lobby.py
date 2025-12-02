@@ -2,6 +2,8 @@ from card import Card
 from card_pile import CardPile
 from player import Player
 import random
+from server import Server
+import server
 
 
 # This class acts as a lobby
@@ -13,6 +15,7 @@ class Lobby:
     currPlayerIndex: int  # position of "currPlayer"
     playerCount: int
     alivePlayerCount: int
+    server: Server
 
     # these are avaiable in extended edition
     # jesterPair: tuple
@@ -23,10 +26,11 @@ class Lobby:
     # count of currently chosen "Player"
     # chosenPlayerCount = 0
 
-    def __init__(self, nameList: list[str]):
-        print("----------------------------------------")
-        print("---------WELCOME TO LOVE LETTER---------")
-        print("----------------------------------------")
+    def __init__(self, nameList: list[str], server: Server):
+        self.server = server
+        server.broadcast(
+            "----------------------------------------\n---------WELCOME TO LOVE LETTER---------\n----------------------------------------"
+        )
         if len(nameList) < 2:
             raise ValueError("Game requires at least 2 players")
         if len(nameList) > 4:
@@ -47,15 +51,15 @@ class Lobby:
 
     # game runs based on user inputs in terminal
     def startGame(self):
-        print("\nGame started!")
+        self.server.broadcast("\nGame started!")
         while not self.isEndGame():
             currPlayer = self.currPlayer
-            print(f"\nCurrent player is {currPlayer.name}")
-            print(f"You have: {currPlayer.showCards()}")
+            self.server.broadcast(f"\nCurrent player is {currPlayer.name}")
+            self.sendCurrPlayer(f"You have: {currPlayer.showCards()}")
             play: str = "-1"
             target: str = "-1"
             guessNum: str = "-1"
-            self.printPlayerHands()
+            self.printPlayerStatus()
 
             # receive parameters through user input
 
@@ -65,27 +69,27 @@ class Lobby:
             # else the player is in control of which card to be played
             if len(self.currPlayer.hand) > 1:
                 while int(play) not in range(1, 3):
-                    play = input("\nWhich one you want to play? 1 or 2: ")
+                    play = self.input("\nWhich one you want to play? 1 or 2: ")
                 if (
                     currPlayer.hand[int(play) - 1].name != "Handmaid"
                     and currPlayer.hand[int(play) - 1].name != "Countess"
                     and currPlayer.hand[int(play) - 1].name != "Princess"
                 ):
                     while int(target) not in range(1, self.playerCount + 1):
-                        target = input(
+                        target = self.input(
                             f"Which player you wanna choose? Enter from 1 to {self.playerCount}: "
                         )
                     while self.playerList[int(target) - 1].isProtected:
-                        target = input(
+                        target = self.input(
                             f"This player is protected, choose another player from 1 to {self.playerCount}: "
                         )
                     while self.playerList[int(target) - 1].isKO:
-                        target = input(
+                        target = self.input(
                             f"This player has been eliminated, choose another player from 1 to {self.playerCount}: "
                         )
                 if currPlayer.hand[int(play) - 1].name == "Guard":
                     while int(guessNum) not in range(2, 9):
-                        guessNum = input(
+                        guessNum = self.input(
                             f"Which number would you like to guess? Enter from 2 to 8: "
                         )
                 self.play(int(play) - 1, int(target) - 1, int(guessNum))
@@ -116,9 +120,9 @@ class Lobby:
                 s = ""
                 for player in winner:
                     s += f"{player.name} "
-                print(f"{s} are the winner!")
+                self.server.broadcast(f"{s} are the winner!")
             else:
-                print(f"{winner[0].name} is the winner!")
+                self.server.broadcast(f"{winner[0].name} is the winner!")
             return True
 
     # play a card with extra parameters, provide infomations
@@ -128,15 +132,17 @@ class Lobby:
         self.currPlayer.discard(playedCard)
         # Print appropriate message based on card type
         if playedCard.name in ["Handmaid", "Countess", "Princess"]:
-            print(f"Player {self.currPlayer.name} has played {playedCard.name}")
+            self.server.broadcast(
+                f"Player {self.currPlayer.name} has played {playedCard.name}"
+            )
         elif playedCard.name == "Guard":
             chosenPlayer = self.playerList[chosenPlayerPosition]
-            print(
+            self.server.broadcast(
                 f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer.name} and guessed {guessedNum}"
             )
         else:
             chosenPlayer = self.playerList[chosenPlayerPosition]
-            print(
+            self.server.broadcast(
                 f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer.name}"
             )
 
@@ -167,7 +173,7 @@ class Lobby:
 
     def draw(self, player: Player):
         drawnCard = self.cardPile.draw()
-        print(f"\nPlayer {player.name} has drawn {drawnCard.name}")
+        # self.sendCurrPlayer(f"\nYou have drawn {drawnCard.name}")
         if drawnCard.name == "Prince":
             player.hasPrince += 1
         elif drawnCard.name == "King":
@@ -204,21 +210,37 @@ class Lobby:
         player.winningTokenCount += 1
 
     def printPlayers(self):
-        print("\nPlayers in this game are:")
+        self.server.broadcast("\nPlayers in this game are:")
         s = ""
         for player in self.playerList:
             s += player.name + ", "
-        print(s)
+        self.server.broadcast(s)
 
-    def printPlayerHands(self):
-        print("Player hands are:")
+    def printPlayerStatus(self):
+        self.server.broadcast("Player statuses are:")
         for index, player in enumerate(self.playerList):
             protected = "(is protected)" if player.isProtected else ""
             ko = "(is KO)" if player.isKO else ""
-            print(f"({index+1}) {player.name} has {player.showCards()}{protected}{ko}")
+            self.server.broadcast(f"({index+1}) {player.name} {protected}{ko}")
 
     def remainingCount(self):
         return len(self.cardPile.cardList)
+
+    def sendCurrPlayer(self, message: str):
+        self.server.clients[self.currPlayerIndex].sendall((message + "\n").encode())
+
+    def receiveCurrPlayer(self):
+        return (
+            self.server.clients[self.currPlayerIndex]
+            .recv(1024)
+            .decode()
+            .split()[1]
+            .strip()
+        )
+
+    def input(self, s: str):
+        self.sendCurrPlayer(s)
+        return self.receiveCurrPlayer()
 
     # ------------ CARDS LOGIC -----------------
 
@@ -229,12 +251,14 @@ class Lobby:
         if guessedNum == chosenPlayer.hand[0].val:
             self.KO(chosenPlayer)
         else:
-            print("Guess not correct!")
+            self.server.broadcast("Guess not correct!")
 
     # for Priest Card
     # peek another player's hand
     def peekHand(self, chosenPlayer: Player):
-        print(f"{chosenPlayer.name} has the card {chosenPlayer.hand[0].name}")
+        self.sendCurrPlayer(
+            f"{chosenPlayer.name} has the card {chosenPlayer.hand[0].name}"
+        )
 
     # for Baron Card
     # compare current player's card with another player
@@ -250,6 +274,9 @@ class Lobby:
     # cannot be targeted by any card
     def protect(self, currPlayer: Player):
         currPlayer.isProtected = True
+        self.server.broadcast(
+            f"Player {currPlayer.name} is protected for the next round!"
+        )
 
     # for Prince Card
     # choose a player (including self) to discard
@@ -275,10 +302,5 @@ class Lobby:
     # for Princess Card and other KO cards
     def KO(self, chosenPlayer: Player):
         chosenPlayer.isKO = True
-        print(f"Player {chosenPlayer.name} is out of the round!")
+        self.server.broadcast(f"Player {chosenPlayer.name} is out of the round!")
         self.alivePlayerCount -= 1
-
-
-# play test
-if __name__ == "__main__":
-    gameInstance = Lobby(["A", "B", "C"])
