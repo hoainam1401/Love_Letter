@@ -280,8 +280,3 @@ class GameInstance:
 # play test
 if __name__ == "__main__":
     gameInstance = GameInstance(["A", "B", "C"])
-    # gameInstance.play(
-    #     1,
-    #     gameInstance.playerList[random.choice([0, 1, 2])],
-    #     random.choice([1, 2, 3, 4, 5, 6, 7, 8]),
-    # )
