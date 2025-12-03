@@ -3,7 +3,8 @@ from card_pile import CardPile
 from player import Player
 import random
 from server import Server
-import server
+from threading import Thread
+import socket
 
 
 # This class acts as a lobby
@@ -35,7 +36,7 @@ class Lobby:
             raise ValueError("Game requires at least 2 players")
         if len(nameList) > 4:
             raise ValueError("Game supports maximum 4 players")
-
+        self.playerList = []
         for name in nameList:
             self.playerList.append(Player(name))
         self.printPlayers()
@@ -46,6 +47,7 @@ class Lobby:
         self.currPlayer = self.playerList[self.currPlayerIndex]
         self.deal()
         self.startGame()
+        Thread(target=self.receiveOthers, args=(self.server.clients,))
 
     # -------------- GAME ROUND LOGIC ---------------
 
@@ -241,6 +243,15 @@ class Lobby:
     def input(self, s: str):
         self.sendCurrPlayer(s)
         return self.receiveCurrPlayer()
+
+    def receiveOthers(self, clients: list[socket.socket]):
+        while True:
+            for client in clients:
+                message = client.recv(1024).decode()
+                messageSplit = message.split(":")
+                messageSplit[0] != self.currPlayer.name
+                print("This player has to wait")
+                client.sendall("It's not your turn yet, please wait.".encode())
 
     # ------------ CARDS LOGIC -----------------
 
