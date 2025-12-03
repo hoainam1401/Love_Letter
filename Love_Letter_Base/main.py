@@ -65,7 +65,7 @@ def load_card_images():
             # Create a placeholder if image doesn't exist
             surf = pygame.Surface((CARD_WIDTH, CARD_HEIGHT))
             surf.fill(CURRENT_LINE)
-            pygame.draw.rect(surf, PINK, surf.get_rect(), 3)
+            pygame.draw.rect(surf, PINK, surf.get_rect(), border_radius=10)
             font = pygame.font.Font(None, 20)
             text = font.render(name, True, FOREGROUND)
             text_rect = text.get_rect(center=(CARD_WIDTH // 2, CARD_HEIGHT // 2))
@@ -205,8 +205,8 @@ def draw_game_screen(game_instance):
         else:
             box_color = GRAY
 
-        pygame.draw.rect(WIN, box_color, box_rect, border_radius=10)
-        pygame.draw.rect(WIN, PINK, box_rect, 2, border_radius=10)
+        pygame.draw.rect(WIN, box_color, box_rect, border_radius=8)
+        pygame.draw.rect(WIN, PINK, box_rect, 2, border_radius=8)
 
         # Player name
         name_surface = TEXT_FONT.render(player.name, True, FOREGROUND)
@@ -217,7 +217,7 @@ def draw_game_screen(game_instance):
         status = (
             "KNOCKED OUT"
             if player.isKO
-            else "Protected" if player.hasHandmaid else "Active"
+            else "Protected" if player.isProtected else "Active"
         )
         status_surface = SMALL_FONT.render(status, True, FOREGROUND)
         status_rect = status_surface.get_rect(center=(x + box_width // 2, y + 55))
