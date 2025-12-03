@@ -5,12 +5,16 @@ import random
 
 
 class GameInstance:
-    playerList: list[Player] = []
+    playerList: list[Player]  # FIXED: Removed default [] to avoid shared state
     cardPile: CardPile
     currPlayer: Player  # current "Player" in round
     currPlayerIndex: int  # position of "currPlayer"
     playerCount: int
     alivePlayerCount: int
+    gameState: str
+    selectedCardIndex: int
+    selectedTargetIndex: int
+    selectedGuess: int
 
     # these are avaiable in extended edition
     # jesterPair: tuple
@@ -30,6 +34,8 @@ class GameInstance:
         if len(nameList) > 4:
             raise ValueError("Game supports maximum 4 players")
 
+        # FIXED: Initialize playerList as instance variable
+        self.playerList = []
         for name in nameList:
             self.playerList.append(Player(name))
         self.printPlayers()
@@ -39,11 +45,112 @@ class GameInstance:
         self.currPlayerIndex = random.choice(range(self.playerCount))
         self.currPlayer = self.playerList[self.currPlayerIndex]
         self.deal()
-        self.startGame()
+        self.gameState = "WAITING_FOR_CARD"
+        self.selectedCardIndex = -1
+        self.selectedTargetIndex = -1
+        self.selectedGuess = -1
 
     # -------------- GAME ROUND LOGIC ---------------
 
     # game runs based on user inputs in terminal
+    def cardNeedsTarget(self, card: Card) -> bool:
+        """Check if a card requires selecting a target player"""
+        no_target_cards = ["Handmaid", "Countess", "Princess"]
+        return card.name not in no_target_cards
+
+    def cardNeedsGuess(self, card: Card) -> bool:
+        """Check if a card requires guessing a number"""
+        return card.name == "Guard"
+
+    def isValidTarget(self, playerIndex: int) -> bool:
+        """Check if a player can be targeted"""
+        if playerIndex < 0 or playerIndex >= self.playerCount:
+            return False
+        target = self.playerList[playerIndex]
+        if target == self.currPlayer:
+            return False
+        if target.isProtected:
+            return False
+        if target.isKO:
+            return False
+        return True
+
+    def selectCard(self, cardIndex: int):
+        """Called when player clicks a card in their hand"""
+        if self.gameState != "WAITING_FOR_CARD":
+            print("Not waiting for card selection!")
+            return
+        if cardIndex < 0 or cardIndex >= len(self.currPlayer.hand):
+            print("Invalid card index!")
+            return
+
+        # Store the selection
+        self.selectedCardIndex = cardIndex
+        card = self.currPlayer.hand[cardIndex]
+
+        if self.cardNeedsTarget(card):
+            self.gameState = "WAITING_FOR_TARGET"
+            print(f"Card {card.name} needs a target. Select a player.")
+        elif self.cardNeedsGuess(card):
+            self.gameState = "WAITING_FOR_GUESS"
+            print(f"Card {card.name} needs a guess. Select 2-8.")
+        else:
+            # Card doesn't need anything else, play it immediately
+            self.executeCardPlay()
+
+    def selectTarget(self, playerIndex: int):
+        """Called when player clicks a target player"""
+        if self.gameState != "WAITING_FOR_TARGET":
+            print("Not waiting for target selection!")
+            return
+
+        if not self.isValidTarget(playerIndex):
+            print("Invalid target!")
+            return
+
+        # Store the selection
+        self.selectedTargetIndex = playerIndex
+
+        # Check if we also need a guess
+        card = self.currPlayer.hand[self.selectedCardIndex]
+        if self.cardNeedsGuess(card):
+            self.gameState = "WAITING_FOR_GUESS"
+            print("Now guess a number (2-8)")
+        else:
+            # We have everything we need
+            self.executeCardPlay()
+
+    def selectGuess(self, guessNum: int):
+        """Called when player clicks a number button"""
+        if self.gameState != "WAITING_FOR_GUESS":
+            print("Not waiting for guess!")
+            return
+
+        if guessNum < 2 or guessNum > 8:
+            print("Invalid guess! Must be 2-8")
+            return
+
+        # Store the selection
+        self.selectedGuess = guessNum
+
+        # Now we have everything
+        self.executeCardPlay()
+
+    def executeCardPlay(self):
+        """Execute the play with all collected information"""
+        self.play(self.selectedCardIndex, self.selectedTargetIndex, self.selectedGuess)
+
+        # Reset selections
+        self.selectedCardIndex = -1
+        self.selectedTargetIndex = -1
+        self.selectedGuess = -1
+
+        # Move to next player
+        self.nextPlayer()
+
+        # Wait for next card selection
+        self.gameState = "WAITING_FOR_CARD"
+
     def startGame(self):
         print("\nGame started!")
         while not self.isEndGame():

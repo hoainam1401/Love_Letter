@@ -4,11 +4,13 @@ from card import Card
 
 class CardPile:
     # Base game will have 16 cards
-    cardList: list[Card] = []
+    cardList: list[Card]  # FIXED: Removed default [] to avoid shared state
 
     # totalCards: int = 0
 
     def __init__(self):
+        # FIXED: Initialize cardList as instance variable
+        self.cardList = []
         # Available in extended game
         # guardCount = Guard.maxAvailable if playerCount >= 5 else Guard.maxAvailableLess
         # for i in range(guardCount):
