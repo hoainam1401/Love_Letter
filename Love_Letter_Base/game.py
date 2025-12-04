@@ -70,10 +70,10 @@ class GameInstance:
         ]
         return card.name in target_cards
 
-    # def cardNeedsTwoTargets(self, card: Card) -> bool:
-    #     """Check if a card requires selecting 2 target players"""
-    #     two_target_cards = ["Cardinal", "Baroness"]
-    #     return card.name in two_target_cards
+    def cardNeedsTwoTargets(self, card: Card) -> bool:
+        """Check if a card requires selecting 2 target players"""
+        two_target_cards = ["Cardinal", "Baroness"]
+        return card.name in two_target_cards
 
     def cardNeedsGuess(self, card: Card) -> bool:
         """Check if a card requires guessing a number"""
@@ -130,14 +130,10 @@ class GameInstance:
         if (
             not self.cardNeedsGuess(card) and not self.cardNeedsTarget(card)
         ) or self.valid == 0:
-            self.executeCardPlay
+            self.executeCardPlay()
         else:
-            if self.cardNeedsTarget(card):
-                self.gameState = "WAITING_FOR_TARGET"
-                print(f"Card {card.name} needs a target. Select a player.")
-            if self.cardNeedsGuess(card):
-                self.gameState = "WAITING_FOR_GUESS"
-                print(f"Card {card.name} needs a guess. Select 2-8.")
+            self.gameState = "WAITING_FOR_TARGET"
+            print(f"Card {card.name} needs a target. Select a player.")
 
     def selectTarget(self, playerIndex: int):
         """Called when player clicks a target player"""
@@ -207,53 +203,6 @@ class GameInstance:
             else:
                 print(f"{endGame[1][0].name} is the winner!")
             self.gameState = "GAME_ENDED"
-
-        # Wait for next card selection
-
-    # def startGame(self):
-    #     print("\nGame started!")
-    #     while not self.isEndGame():
-    #         currPlayer = self.currPlayer
-    #         print(f"\nCurrent player is {currPlayer.name}")
-    #         print(f"You have: {currPlayer.showCards()}")
-    #         play: str = "-1"
-    #         target: str = "-1"
-    #         guessNum: str = "-1"
-    #         self.printPlayerHands()
-
-    #         # receive parameters through user input
-
-    #         # len(self.currPlayer.hand) == 1 happens when the current Player
-    #         # draws a "Countess" card, while having a "King" or "Prince" card,
-    #         # in which "Countess" card would be forced to be played,
-    #         # else the player is in control of which card to be played
-    #         if len(self.currPlayer.hand) > 1:
-    #             while int(play) not in range(1, 3):
-    #                 play = input("\nWhich one you want to play? 1 or 2: ")
-    #             if (
-    #                 currPlayer.hand[int(play) - 1].name != "Handmaid"
-    #                 and currPlayer.hand[int(play) - 1].name != "Countess"
-    #                 and currPlayer.hand[int(play) - 1].name != "Princess"
-    #             ):
-    #                 while int(target) not in range(1, self.playerCount + 1):
-    #                     target = input(
-    #                         f"Which player you wanna choose? Enter from 1 to {self.playerCount}: "
-    #                     )
-    #                 while self.playerList[int(target) - 1].isProtected:
-    #                     target = input(
-    #                         f"This player is protected, choose another player from 1 to {self.playerCount}: "
-    #                     )
-    #                 while self.playerList[int(target) - 1].isKO:
-    #                     target = input(
-    #                         f"This player has been eliminated, choose another player from 1 to {self.playerCount}: "
-    #                     )
-    #             if currPlayer.hand[int(play) - 1].name == "Guard":
-    #                 while int(guessNum) not in range(2, 9):
-    #                     guessNum = input(
-    #                         f"Which number would you like to guess? Enter from 2 to 8: "
-    #                     )
-    #             self.play(int(play) - 1, int(target) - 1, int(guessNum))
-    #         self.nextPlayer()
 
     def isEndGame(self):
         winner: list[Player] = []
