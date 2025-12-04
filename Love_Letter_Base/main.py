@@ -4,8 +4,9 @@ import os
 from game import GameInstance
 
 FPS = 60
-WIDTH = 1200
-HEIGHT = 900
+# WIDTH = 1800
+WIDTH = 800
+HEIGHT = 1000
 
 pygame.init()
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -193,32 +194,40 @@ def draw_game_screen(game_instance, mouse_pos=(0, 0)):
 
     # Draw players in a layout
     player_positions = [
-        (WIDTH // 2 - 320, HEIGHT - 250),  # Bottom left (player 1)
-        (50, HEIGHT // 2 - 150),  # Left (player 2)
+        (WIDTH // 2 - 340, HEIGHT - 300),  # Bottom left (player 1)
+        (WIDTH - 250, HEIGHT // 2 - 150),  # Right (player 2)
         (WIDTH // 2 - 100, 100),  # Top (player 3)
-        (WIDTH - 250, HEIGHT // 2 - 150),  # Right (player 4)
+        (50, HEIGHT // 2 - 150),  # Left (player 4)
     ]
 
     for i, player in enumerate(game_instance.playerList):
+        # old UI
         x, y = player_positions[i]
+
+        # player = game_instance.playerList[playerPos]
+        x, y = player_positions[
+            (i - game_instance.currPlayerIndex) % game_instance.playerCount
+        ]
 
         # Player info box
         box_width = 200
         box_height = 180
         box_rect = pygame.Rect(x, y, box_width, box_height)
 
-        # NEW: Check if this player can be targeted 
+        # NEW: Check if this player can be targeted
         is_valid_target = False
-        if hasattr(game_instance, 'gameState') and hasattr(game_instance, 'isValidTarget'):
+        if hasattr(game_instance, "gameState") and hasattr(
+            game_instance, "isValidTarget"
+        ):
             if game_instance.gameState == "WAITING_FOR_TARGET":
                 is_valid_target = game_instance.isValidTarget(i)
                 if is_valid_target:
                     player_rects.append((i, box_rect))
 
-        # Check if hovering over this player 
+        # Check if hovering over this player
         is_hovering = box_rect.collidepoint(mouse_pos)
 
-        # Color based on state 
+        # Color based on state
         if player.isKO:
             box_color = RED
         elif player == game_instance.currPlayer:
@@ -230,8 +239,8 @@ def draw_game_screen(game_instance, mouse_pos=(0, 0)):
             box_color = GRAY
 
         pygame.draw.rect(WIN, box_color, box_rect, border_radius=8)
-        
-        # Add hover effect 
+
+        # Add hover effect
         if is_hovering and is_valid_target:
             pygame.draw.rect(WIN, YELLOW, box_rect, 4, border_radius=8)
         else:
@@ -268,7 +277,7 @@ def draw_game_screen(game_instance, mouse_pos=(0, 0)):
 
     # Draw current player's hand at bottom center with actual card images
     if len(game_instance.currPlayer.hand) > 0:
-        hand_y = HEIGHT - 160
+        hand_y = HEIGHT - 250
 
         # Background for hand area - sized for 2 cards
         hand_bg_width = 280
@@ -294,14 +303,14 @@ def draw_game_screen(game_instance, mouse_pos=(0, 0)):
             card_rect = pygame.Rect(card_x, card_y, CARD_WIDTH, CARD_HEIGHT)
             card_rects.append(card_rect)
 
-            # Check if mouse is hovering 
+            # Check if mouse is hovering
             is_hovering = card_rect.collidepoint(mouse_pos)
-            
-            # Draw highlight if hovering and clickable 
+
+            # Draw highlight if hovering and clickable
             can_click = True
-            if hasattr(game_instance, 'gameState'):
+            if hasattr(game_instance, "gameState"):
                 can_click = game_instance.gameState == "WAITING_FOR_CARD"
-            
+
             if is_hovering and can_click:
                 # Draw a glow effect
                 highlight_rect = card_rect.inflate(10, 10)  # Slightly bigger
@@ -321,8 +330,8 @@ def draw_game_screen(game_instance, mouse_pos=(0, 0)):
             )
             WIN.blit(card_name, card_name_rect)
 
-    # Draw number buttons if waiting for guess 
-    if hasattr(game_instance, 'gameState'):
+    # Draw number buttons if waiting for guess
+    if hasattr(game_instance, "gameState"):
         if game_instance.gameState == "WAITING_FOR_GUESS":
             button_width = 60
             button_height = 60
@@ -330,28 +339,30 @@ def draw_game_screen(game_instance, mouse_pos=(0, 0)):
             total_width = 7 * button_width + 6 * button_spacing
             start_x = WIDTH // 2 - total_width // 2
             button_y = HEIGHT // 2
-            
+
             for num in range(2, 9):  # 2 through 8
                 button_x = start_x + (num - 2) * (button_width + button_spacing)
-                button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
-                
-                # Check if hovering 
+                button_rect = pygame.Rect(
+                    button_x, button_y, button_width, button_height
+                )
+
+                # Check if hovering
                 is_hovering = button_rect.collidepoint(mouse_pos)
-                
+
                 # Draw button
                 button_color = CYAN if is_hovering else PURPLE
                 pygame.draw.rect(WIN, button_color, button_rect, border_radius=8)
                 pygame.draw.rect(WIN, PINK, button_rect, 2, border_radius=8)
-                
+
                 # Draw number
                 num_text = TEXT_FONT.render(str(num), True, FOREGROUND)
                 num_rect = num_text.get_rect(center=button_rect.center)
                 WIN.blit(num_text, num_rect)
-                
+
                 # Store for click detection
                 number_buttons.append((num, button_rect))
 
-    if hasattr(game_instance, 'gameState'):
+    if hasattr(game_instance, "gameState"):
         if game_instance.gameState == "WAITING_FOR_CARD":
             prompt = TEXT_FONT.render("Select a card to play", True, YELLOW)
         elif game_instance.gameState == "WAITING_FOR_TARGET":
@@ -363,7 +374,7 @@ def draw_game_screen(game_instance, mouse_pos=(0, 0)):
     else:
         # Fallback if gameState not implemented yet
         prompt = TEXT_FONT.render("Select a card to play", True, YELLOW)
-    
+
     prompt_rect = prompt.get_rect(center=(WIDTH // 2, HEIGHT - 40))
     WIN.blit(prompt, prompt_rect)
 
@@ -373,7 +384,7 @@ def draw_game_screen(game_instance, mouse_pos=(0, 0)):
 
     pygame.display.update()
 
-    # Return all clickable rectangles 
+    # Return all clickable rectangles
     return card_rects, player_rects, number_buttons
 
 
@@ -389,12 +400,12 @@ def main():
     selected_player_count = 0
     game_instance = None
 
-    # Store clickable elements 
+    # Store clickable elements
     card_rects = []
     player_rects = []
     number_buttons = []
-    
-    # Track mouse position 
+
+    # Track mouse position
     mouse_pos = (0, 0)
 
     while run:
@@ -434,42 +445,54 @@ def main():
                         state = STATE_MENU
                         selected_player_count = 0
                         game_instance = None
-                
+
                 # Track mouse motion
                 elif event.type == pygame.MOUSEMOTION:
                     mouse_pos = event.pos
-                
+
                 # Handle mouse clicks
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_pos = event.pos
-                    
-                    # Check if clicked on a card 
+
+                    # Check if clicked on a card
                     if game_instance and len(card_rects) > 0:
                         for idx, rect in enumerate(card_rects):
                             if rect.collidepoint(mouse_pos):
-                                print(f"Clicked card {idx}: {game_instance.currPlayer.hand[idx].name}")
-                                game_instance.selectCard(idx)  # Actually call the method
+                                print(
+                                    f"Clicked card {idx}: {game_instance.currPlayer.hand[idx].name}"
+                                )
+                                game_instance.selectCard(
+                                    idx
+                                )  # Actually call the method
                                 break  # Only handle one click
-                    
+
                     # Check if clicked on a player
                     if game_instance and len(player_rects) > 0:
                         for player_idx, rect in player_rects:
                             if rect.collidepoint(mouse_pos):
-                                print(f"Clicked player {player_idx}: {game_instance.playerList[player_idx].name}")
-                                game_instance.selectTarget(player_idx)  # Actually call the method!
+                                print(
+                                    f"Clicked player {player_idx}: {game_instance.playerList[player_idx].name}"
+                                )
+                                game_instance.selectTarget(
+                                    player_idx
+                                )  # Actually call the method!
                                 break
-                    
-                    # Check if clicked on a number button 
+
+                    # Check if clicked on a number button
                     if game_instance and len(number_buttons) > 0:
                         for num, rect in number_buttons:
                             if rect.collidepoint(mouse_pos):
                                 print(f"Guessed number: {num}")
-                                game_instance.selectGuess(num)  # Actually call the method!
+                                game_instance.selectGuess(
+                                    num
+                                )  # Actually call the method!
                                 break
-            
+
             # FIXED: Draw AFTER processing events, only once per frame
             if game_instance:
-                card_rects, player_rects, number_buttons = draw_game_screen(game_instance, mouse_pos)
+                card_rects, player_rects, number_buttons = draw_game_screen(
+                    game_instance, mouse_pos
+                )
 
     pygame.quit()
     sys.exit()
