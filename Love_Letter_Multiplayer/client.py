@@ -3,7 +3,7 @@ import threading
 
 nickname = input("Please enter a nickname: ")
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(("0.0.0.0", 21012))
+client.connect(("25.14.115.139", 21011))  # lan ip of host
 print("You have connected to the server")
 
 
@@ -31,3 +31,6 @@ receive_thread.start()
 
 receive_thread = threading.Thread(target=write)
 receive_thread.start()
+
+if __name__ == "__main__":
+    pass

@@ -1,5 +1,3 @@
-from email import message
-from pydoc import cli
 from threading import Thread
 import socket
 
@@ -10,13 +8,14 @@ class Server:
     nicknames: list[str] = []
 
     def __init__(self):
-        self.host = "0.0.0.0"  # local host
-        self.port = 21012
+        self.host = ""  # local host
+        self.port = 21011
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((self.host, self.port))
         self.server.listen()
-        print("Server is listening...")
+        print(f"Server is listening on {self.host}:{self.port}...")
+        self.lobby = None
         try:
             self.receive()
         finally:
@@ -31,18 +30,19 @@ class Server:
             try:
                 message: str = client.recv(1024).decode()
                 messageSplit: list[str] = message.split(":")
-                if messageSplit[1].strip() in ["start", "new game"]:
+                if messageSplit[1].strip() in ["start", "new game"] and not self.lobby:
                     from lobby import Lobby
 
-                    print("New game started.")
                     self.gameStarted = True
-                    lobby = Lobby(self.nicknames, self)
+                    self.lobby = Lobby(self.nicknames, self)
+                    self.broadcast("Game has ended.")
+                    self.lobby = None
             except:
                 index = self.clients.index(client)
                 self.clients.remove(client)
                 client.close()
                 nickname = self.nicknames[index]
-                self.broadcast(f"{nickname} left the lobby")
+                self.broadcast(f"{nickname} left the lobby.")
                 self.nicknames.remove(nickname)
                 break
 

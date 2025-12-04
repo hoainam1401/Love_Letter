@@ -14,6 +14,7 @@ class Lobby:
     cardPile: CardPile
     currPlayer: Player  # current "Player" in round
     currPlayerIndex: int  # position of "currPlayer"
+    currClient: socket.socket
     playerCount: int
     alivePlayerCount: int
     server: Server
@@ -32,6 +33,7 @@ class Lobby:
         server.broadcast(
             "----------------------------------------\n---------WELCOME TO LOVE LETTER---------\n----------------------------------------"
         )
+        self.generateListeners(server.clients)
         if len(nameList) < 2:
             raise ValueError("Game requires at least 2 players")
         if len(nameList) > 4:
@@ -45,9 +47,33 @@ class Lobby:
         self.cardPile = CardPile()
         self.currPlayerIndex = random.choice(range(self.playerCount))
         self.currPlayer = self.playerList[self.currPlayerIndex]
+        self.currClient = self.server.clients[self.currPlayerIndex]
         self.deal()
         self.startGame()
-        Thread(target=self.receiveOthers, args=(self.server.clients,))
+
+    # ------------ NETWORK LOGIC -----------------
+    def generateListeners(self, clients: list[socket.socket]):
+        for client in clients:
+            thread = Thread(target=self.handle, args=(client,))
+            thread.start()
+
+    # def input(self, s: str):
+    #     self.sendCurrPlayer(s)
+    #     return self.currClient.recv(1024).decode().split()[1].strip()
+
+    def sendCurrPlayer(self, message: str):
+        self.currClient.sendall((message + "\n").encode())
+
+    def handle(self, client: socket.socket, messageToSend=""):
+        while True:
+            if messageToSend:
+                client.sendall(messageToSend)
+            message = client.recv(1024).decode()
+            messageSplit = message.split(":")
+            if messageSplit[0] != self.currPlayer.name:
+                client.sendall("It's not your turn yet, please wait.".encode())
+            else:
+                return messageSplit[1].strip()
 
     # -------------- GAME ROUND LOGIC ---------------
 
@@ -62,7 +88,7 @@ class Lobby:
             target: str = "-1"
             guessNum: str = "-1"
             self.printPlayerStatus()
-
+            self.generateListeners(self.server.clients)
             # receive parameters through user input
 
             # len(self.currPlayer.hand) == 1 happens when the current Player
@@ -71,31 +97,38 @@ class Lobby:
             # else the player is in control of which card to be played
             if len(self.currPlayer.hand) > 1:
                 while int(play) not in range(1, 3):
-                    play = self.input("\nWhich one you want to play? 1 or 2: ")
+                    play = self.handle(
+                        self.currClient, "\nWhich one you want to play? 1 or 2: "
+                    )
                 if (
                     currPlayer.hand[int(play) - 1].name != "Handmaid"
                     and currPlayer.hand[int(play) - 1].name != "Countess"
                     and currPlayer.hand[int(play) - 1].name != "Princess"
                 ):
                     while int(target) not in range(1, self.playerCount + 1):
-                        target = self.input(
-                            f"Which player you wanna choose? Enter from 1 to {self.playerCount}: "
+                        target = self.handle(
+                            self.currClient,
+                            f"Which player you wanna choose? Enter from 1 to {self.playerCount}: ",
                         )
                     while self.playerList[int(target) - 1].isProtected:
-                        target = self.input(
-                            f"This player is protected, choose another player from 1 to {self.playerCount}: "
+                        target = self.handle(
+                            self.currClient,
+                            f"This player is protected, choose another player from 1 to {self.playerCount}: ",
                         )
                     while self.playerList[int(target) - 1].isKO:
-                        target = self.input(
-                            f"This player has been eliminated, choose another player from 1 to {self.playerCount}: "
+                        target = self.handle(
+                            self.currClient,
+                            f"This player has been eliminated, choose another player from 1 to {self.playerCount}: ",
                         )
                 if currPlayer.hand[int(play) - 1].name == "Guard":
                     while int(guessNum) not in range(2, 9):
-                        guessNum = self.input(
-                            f"Which number would you like to guess? Enter from 2 to 8: "
+                        guessNum = self.handle(
+                            self.currClient,
+                            f"Which number would you like to guess? Enter from 2 to 8: ",
                         )
                 self.play(int(play) - 1, int(target) - 1, int(guessNum))
             self.nextPlayer()
+        return 1
 
     def isEndGame(self):
         winner: list[Player] = []
@@ -202,9 +235,11 @@ class Lobby:
         # print(f"new index: {(self.currPlayerIndex + 1) % self.playerCount}")
         self.currPlayerIndex = (self.currPlayerIndex + 1) % self.playerCount
         self.currPlayer = self.playerList[self.currPlayerIndex]
+        self.currClient = self.server.clients[self.currPlayerIndex]
         while self.currPlayer.isKO:
             self.currPlayerIndex = (self.currPlayerIndex + 1) % self.playerCount
             self.currPlayer = self.playerList[self.currPlayerIndex]
+            self.currClient = self.server.clients[self.currPlayerIndex]
         self.currPlayer.isProtected = False
         self.draw(self.currPlayer)
 
@@ -227,31 +262,6 @@ class Lobby:
 
     def remainingCount(self):
         return len(self.cardPile.cardList)
-
-    def sendCurrPlayer(self, message: str):
-        self.server.clients[self.currPlayerIndex].sendall((message + "\n").encode())
-
-    def receiveCurrPlayer(self):
-        return (
-            self.server.clients[self.currPlayerIndex]
-            .recv(1024)
-            .decode()
-            .split()[1]
-            .strip()
-        )
-
-    def input(self, s: str):
-        self.sendCurrPlayer(s)
-        return self.receiveCurrPlayer()
-
-    def receiveOthers(self, clients: list[socket.socket]):
-        while True:
-            for client in clients:
-                message = client.recv(1024).decode()
-                messageSplit = message.split(":")
-                messageSplit[0] != self.currPlayer.name
-                print("This player has to wait")
-                client.sendall("It's not your turn yet, please wait.".encode())
 
     # ------------ CARDS LOGIC -----------------
 
@@ -315,3 +325,7 @@ class Lobby:
         chosenPlayer.isKO = True
         self.server.broadcast(f"Player {chosenPlayer.name} is out of the round!")
         self.alivePlayerCount -= 1
+
+
+if __name__ == "__main__":
+    pass

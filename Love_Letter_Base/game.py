@@ -12,9 +12,11 @@ class GameInstance:
     playerCount: int
     alivePlayerCount: int
     gameState: str
+    # attributes to track playing card
     selectedCardIndex: int
     selectedTargetIndex: int
     selectedGuess: int
+    valid: int  # track number of valid targets
 
     # these are avaiable in extended edition
     # jesterPair: tuple
@@ -55,26 +57,43 @@ class GameInstance:
     # game runs based on user inputs in terminal
     def cardNeedsTarget(self, card: Card) -> bool:
         """Check if a card requires selecting a target player"""
-        no_target_cards = ["Handmaid", "Countess", "Princess"]
+        no_target_cards = [
+            "Assassin",
+            "Handmaid",
+            "Count",
+            "Constable",
+            "Countess",
+            "Princess",
+        ]
         return card.name not in no_target_cards
 
     def cardNeedsGuess(self, card: Card) -> bool:
         """Check if a card requires guessing a number"""
-        return card.name == "Guard"
+        return card.name in ["Guard", "Bishop"]
+
+    # check if card can target self
+    def cardSelfAllowed(self) -> bool:
+        return self.currPlayer.hand[self.selectedCardIndex].name in [
+            "Cardinal",
+            "Baroness",
+            "Sycophant",
+            "Prince",
+        ]
 
     def isValidTarget(self, playerIndex: int) -> bool:
         """Check if a player can be targeted"""
         if playerIndex < 0 or playerIndex >= self.playerCount:
             return False
         target = self.playerList[playerIndex]
-        if target == self.currPlayer:
-            return False
         if target.isProtected:
             return False
         if target.isKO:
             return False
+        if target == self.currPlayer:
+            return self.cardSelfAllowed()
         return True
 
+    # -------------- DURING PLAYER TURN ---------------
     def selectCard(self, cardIndex: int):
         """Called when player clicks a card in their hand"""
         if self.gameState != "WAITING_FOR_CARD":
@@ -87,16 +106,24 @@ class GameInstance:
         # Store the selection
         self.selectedCardIndex = cardIndex
         card = self.currPlayer.hand[cardIndex]
-
-        if self.cardNeedsTarget(card):
-            self.gameState = "WAITING_FOR_TARGET"
-            print(f"Card {card.name} needs a target. Select a player.")
-        elif self.cardNeedsGuess(card):
-            self.gameState = "WAITING_FOR_GUESS"
-            print(f"Card {card.name} needs a guess. Select 2-8.")
+        self.valid = 0
+        for i in range(len(self.playerList)):
+            if self.isValidTarget(i):
+                self.valid += 1
+        # if there is no valid player, cancel the card
+        print(f"valid = {self.valid}")
+        if self.valid > 0:
+            if self.cardNeedsTarget(card):
+                self.gameState = "WAITING_FOR_TARGET"
+                print(f"Card {card.name} needs a target. Select a player.")
+            elif self.cardNeedsGuess(card):
+                self.gameState = "WAITING_FOR_GUESS"
+                print(f"Card {card.name} needs a guess. Select 2-8.")
+            else:
+                self.executeCardPlay()
         else:
-            # Card doesn't need anything else, play it immediately
             self.executeCardPlay()
+        # Card doesn't need anything else, play it immediately
 
     def selectTarget(self, playerIndex: int):
         """Called when player clicks a target player"""
@@ -138,7 +165,13 @@ class GameInstance:
 
     def executeCardPlay(self):
         """Execute the play with all collected information"""
-        self.play(self.selectedCardIndex, self.selectedTargetIndex, self.selectedGuess)
+        if self.valid > 0:
+            self.play(
+                self.selectedCardIndex, self.selectedTargetIndex, self.selectedGuess
+            )
+        else:
+            self.currPlayer.discard(self.currPlayer.hand[self.selectedCardIndex])
+            print("Card canceled due to no valid target!")
 
         # Reset selections
         self.selectedCardIndex = -1
@@ -215,7 +248,7 @@ class GameInstance:
             for player in self.playerList:
                 if not player.isKO and player.hand[0].val == max:
                     winner.append(player)
-        # annouce the winner(s)
+        # announce the winner(s)
         if self.alivePlayerCount == 1 or len(self.cardPile.cardList) < 2:
             if len(winner) > 1:
                 s = ""
@@ -372,10 +405,6 @@ class GameInstance:
         temp = currPlayer.hand.copy()
         currPlayer.hand = chosenPlayer.hand.copy()
         chosenPlayer.hand = temp
-
-    # for Countess Card
-    # must discard if card "Prince" or "King"
-    # is also on current player's hand
 
     # for Princess Card and other KO cards
     def KO(self, chosenPlayer: Player):
