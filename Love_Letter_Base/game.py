@@ -47,6 +47,7 @@ class GameInstance:
         self.currPlayerIndex = random.choice(range(self.playerCount))
         self.currPlayer = self.playerList[self.currPlayerIndex]
         self.deal()
+        self.printPlayerHands()
         self.gameState = "WAITING_FOR_CARD"
         self.selectedCardIndex = -1
         self.selectedTargetIndex = -1
@@ -57,15 +58,22 @@ class GameInstance:
     # game runs based on user inputs in terminal
     def cardNeedsTarget(self, card: Card) -> bool:
         """Check if a card requires selecting a target player"""
-        no_target_cards = [
+        target_cards = [
             "Assassin",
-            "Handmaid",
-            "Count",
-            "Constable",
-            "Countess",
-            "Princess",
+            "Jester",
+            "Priest",
+            "Baron",
+            "Sycophant",
+            "Prince",
+            "King",
+            "Dowager Queen",
         ]
-        return card.name not in no_target_cards
+        return card.name in target_cards
+
+    # def cardNeedsTwoTargets(self, card: Card) -> bool:
+    #     """Check if a card requires selecting 2 target players"""
+    #     two_target_cards = ["Cardinal", "Baroness"]
+    #     return card.name in two_target_cards
 
     def cardNeedsGuess(self, card: Card) -> bool:
         """Check if a card requires guessing a number"""
@@ -99,7 +107,15 @@ class GameInstance:
         if self.gameState != "WAITING_FOR_CARD":
             print("Not waiting for card selection!")
             return
-        if cardIndex < 0 or cardIndex >= len(self.currPlayer.hand):
+        if (
+            cardIndex < 0
+            or cardIndex >= len(self.currPlayer.hand)
+            or (
+                self.currPlayer.hasCountess > 0
+                and (self.currPlayer.hasPrince > 0 or self.currPlayer.hasKing > 0)
+                and (self.currPlayer.hand[cardIndex].name != "Countess")
+            )
+        ):
             print("Invalid card index!")
             return
 
@@ -110,23 +126,22 @@ class GameInstance:
         for i in range(len(self.playerList)):
             if self.isValidTarget(i):
                 self.valid += 1
-        # if there is no valid player, cancel the card
-        print(f"valid = {self.valid}")
-        if self.valid > 0:
+        # Card doesn't need any info or no valid target, play it immediately
+        if (
+            not self.cardNeedsGuess(card) and not self.cardNeedsTarget(card)
+        ) or self.valid == 0:
+            self.executeCardPlay
+        else:
             if self.cardNeedsTarget(card):
                 self.gameState = "WAITING_FOR_TARGET"
                 print(f"Card {card.name} needs a target. Select a player.")
-            elif self.cardNeedsGuess(card):
+            if self.cardNeedsGuess(card):
                 self.gameState = "WAITING_FOR_GUESS"
                 print(f"Card {card.name} needs a guess. Select 2-8.")
-            else:
-                self.executeCardPlay()
-        else:
-            self.executeCardPlay()
-        # Card doesn't need anything else, play it immediately
 
     def selectTarget(self, playerIndex: int):
         """Called when player clicks a target player"""
+
         if self.gameState != "WAITING_FOR_TARGET":
             print("Not waiting for target selection!")
             return
@@ -179,55 +194,66 @@ class GameInstance:
         self.selectedGuess = -1
 
         # Move to next player
-        self.nextPlayer()
+        endGame = self.isEndGame()
+        if not endGame[0]:
+            self.nextPlayer()
+        else:
+            # announce the winner(s)
+            if len(endGame[1]) > 1:
+                s = ""
+                for player in endGame[1]:
+                    s += f"{player.name} "
+                print(f"{s} are the winner!")
+            else:
+                print(f"{endGame[1][0].name} is the winner!")
+            self.gameState = "GAME_ENDED"
 
         # Wait for next card selection
-        self.gameState = "WAITING_FOR_CARD"
 
-    def startGame(self):
-        print("\nGame started!")
-        while not self.isEndGame():
-            currPlayer = self.currPlayer
-            print(f"\nCurrent player is {currPlayer.name}")
-            print(f"You have: {currPlayer.showCards()}")
-            play: str = "-1"
-            target: str = "-1"
-            guessNum: str = "-1"
-            self.printPlayerHands()
+    # def startGame(self):
+    #     print("\nGame started!")
+    #     while not self.isEndGame():
+    #         currPlayer = self.currPlayer
+    #         print(f"\nCurrent player is {currPlayer.name}")
+    #         print(f"You have: {currPlayer.showCards()}")
+    #         play: str = "-1"
+    #         target: str = "-1"
+    #         guessNum: str = "-1"
+    #         self.printPlayerHands()
 
-            # receive parameters through user input
+    #         # receive parameters through user input
 
-            # len(self.currPlayer.hand) == 1 happens when the current Player
-            # draws a "Countess" card, while having a "King" or "Prince" card,
-            # in which "Countess" card would be forced to be played,
-            # else the player is in control of which card to be played
-            if len(self.currPlayer.hand) > 1:
-                while int(play) not in range(1, 3):
-                    play = input("\nWhich one you want to play? 1 or 2: ")
-                if (
-                    currPlayer.hand[int(play) - 1].name != "Handmaid"
-                    and currPlayer.hand[int(play) - 1].name != "Countess"
-                    and currPlayer.hand[int(play) - 1].name != "Princess"
-                ):
-                    while int(target) not in range(1, self.playerCount + 1):
-                        target = input(
-                            f"Which player you wanna choose? Enter from 1 to {self.playerCount}: "
-                        )
-                    while self.playerList[int(target) - 1].isProtected:
-                        target = input(
-                            f"This player is protected, choose another player from 1 to {self.playerCount}: "
-                        )
-                    while self.playerList[int(target) - 1].isKO:
-                        target = input(
-                            f"This player has been eliminated, choose another player from 1 to {self.playerCount}: "
-                        )
-                if currPlayer.hand[int(play) - 1].name == "Guard":
-                    while int(guessNum) not in range(2, 9):
-                        guessNum = input(
-                            f"Which number would you like to guess? Enter from 2 to 8: "
-                        )
-                self.play(int(play) - 1, int(target) - 1, int(guessNum))
-            self.nextPlayer()
+    #         # len(self.currPlayer.hand) == 1 happens when the current Player
+    #         # draws a "Countess" card, while having a "King" or "Prince" card,
+    #         # in which "Countess" card would be forced to be played,
+    #         # else the player is in control of which card to be played
+    #         if len(self.currPlayer.hand) > 1:
+    #             while int(play) not in range(1, 3):
+    #                 play = input("\nWhich one you want to play? 1 or 2: ")
+    #             if (
+    #                 currPlayer.hand[int(play) - 1].name != "Handmaid"
+    #                 and currPlayer.hand[int(play) - 1].name != "Countess"
+    #                 and currPlayer.hand[int(play) - 1].name != "Princess"
+    #             ):
+    #                 while int(target) not in range(1, self.playerCount + 1):
+    #                     target = input(
+    #                         f"Which player you wanna choose? Enter from 1 to {self.playerCount}: "
+    #                     )
+    #                 while self.playerList[int(target) - 1].isProtected:
+    #                     target = input(
+    #                         f"This player is protected, choose another player from 1 to {self.playerCount}: "
+    #                     )
+    #                 while self.playerList[int(target) - 1].isKO:
+    #                     target = input(
+    #                         f"This player has been eliminated, choose another player from 1 to {self.playerCount}: "
+    #                     )
+    #             if currPlayer.hand[int(play) - 1].name == "Guard":
+    #                 while int(guessNum) not in range(2, 9):
+    #                     guessNum = input(
+    #                         f"Which number would you like to guess? Enter from 2 to 8: "
+    #                     )
+    #             self.play(int(play) - 1, int(target) - 1, int(guessNum))
+    #         self.nextPlayer()
 
     def isEndGame(self):
         winner: list[Player] = []
@@ -239,7 +265,7 @@ class GameInstance:
         # calculate who has the highest score
         # if multiple players have same score,
         # there would be multiple winners
-        if len(self.cardPile.cardList) < 2:
+        if self.remainingCount() < 2:
             max = 0
             for player in self.playerList:
                 if not player.isKO and player.hand[0].val > max:
@@ -248,16 +274,7 @@ class GameInstance:
             for player in self.playerList:
                 if not player.isKO and player.hand[0].val == max:
                     winner.append(player)
-        # announce the winner(s)
-        if self.alivePlayerCount == 1 or len(self.cardPile.cardList) < 2:
-            if len(winner) > 1:
-                s = ""
-                for player in winner:
-                    s += f"{player.name} "
-                print(f"{s} are the winner!")
-            else:
-                print(f"{winner[0].name} is the winner!")
-            return True
+        return (self.alivePlayerCount == 1 or len(self.cardPile.cardList) < 2, winner)
 
     # play a card with extra parameters, provide infomations
     # to execute card actions correctly
@@ -277,7 +294,6 @@ class GameInstance:
             print(
                 f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer.name}"
             )
-
         # Execute card effect
         if playedCard.name == "Guard":
             chosenPlayer = self.playerList[chosenPlayerPosition]
@@ -313,11 +329,6 @@ class GameInstance:
         elif drawnCard.name == "Countess":
             player.hasCountess += 1
         player.hand.append(drawnCard)
-        if player.hasCountess > 0 and (player.hasPrince > 0 or player.hasKing > 0):
-            for i in [0, 1]:
-                if player.hand[i].name == "Countess":
-                    self.play(i, self.currPlayerIndex, -1)
-                    break
 
     # After starting game, deal for each player 1 card,
     # the first player gets extra 1 card
@@ -328,8 +339,6 @@ class GameInstance:
         # self.printPlayerHands()
 
     def nextPlayer(self):
-        # print(f"current index: {self.currPlayerIndex}")
-        # print(f"new index: {(self.currPlayerIndex + 1) % self.playerCount}")
         self.currPlayerIndex = (self.currPlayerIndex + 1) % self.playerCount
         self.currPlayer = self.playerList[self.currPlayerIndex]
         while self.currPlayer.isKO:
@@ -337,6 +346,8 @@ class GameInstance:
             self.currPlayer = self.playerList[self.currPlayerIndex]
         self.currPlayer.isProtected = False
         self.draw(self.currPlayer)
+        self.printPlayerHands()
+        self.gameState = "WAITING_FOR_CARD"
 
     def award(self, player: Player):
         player.winningTokenCount += 1
