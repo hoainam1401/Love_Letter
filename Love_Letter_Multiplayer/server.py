@@ -1,11 +1,14 @@
+import pickle
 from threading import Thread
 import socket
+from game import GameInstance
 
 
 class Server:
 
     clients: list[socket.socket] = []
     nicknames: list[str] = []
+    gameInstance: GameInstance
 
     def __init__(self):
         self.host = ""  # local host
@@ -15,7 +18,6 @@ class Server:
         self.server.bind((self.host, self.port))
         self.server.listen()
         print(f"Server is listening on {self.host}:{self.port}...")
-        self.lobby = None
         try:
             self.receive()
         finally:
@@ -28,23 +30,21 @@ class Server:
     def handle(self, client: socket.socket):
         while True:
             try:
+                # first message will be "start"
                 message: str = client.recv(1024).decode()
-                messageSplit: list[str] = message.split(":")
-                if messageSplit[1].strip() in ["start", "new game"] and not self.lobby:
-                    from lobby import Lobby
+                if message == "start":
+                    self.gameInstance = GameInstance(self.nicknames)
+                    for client in self.clients:
+                        client.sendall(pickle.dumps(self.gameInstance))
+                        print("Done packing")
 
-                    self.gameStarted = True
-                    self.lobby = Lobby(self.nicknames, self)
-                    self.broadcast("Game has ended.")
-                    self.lobby = None
             except:
                 index = self.clients.index(client)
                 self.clients.remove(client)
                 client.close()
                 nickname = self.nicknames[index]
-                self.broadcast(f"{nickname} left the lobby.")
+                # self.broadcast(f"{nickname} left the lobby.")
                 self.nicknames.remove(nickname)
-                break
 
     def receive(self):
         while True:
@@ -55,7 +55,7 @@ class Server:
                 self.nicknames.append(nickname)
                 self.clients.append(client)
             print(f"Nickname of the client is {nickname}")
-            self.broadcast(f"{nickname} joined the lobby!")
+            print(f"{nickname} joined the lobby!")
             thread = Thread(target=self.handle, args=(client,))
             thread.start()
 
