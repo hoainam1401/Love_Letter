@@ -36,7 +36,3 @@ class Player:
         for card in self.hand:
             s += card.name + " "
         return s
-
-
-if __name__ == "__main__":
-    pass
