@@ -250,13 +250,15 @@ def draw_player_selection_screen(selected_count):
     return buttons, start_button
 
 
-def draw_game_screen(game_instance, mouse_pos=(0, 0)):
+def draw_game_screen(game_instance, mouse_pos=(0, 0), viewing_discard_idx=None):
     WIN.fill(BACKGROUND)
 
     # Track clickable card rectangles
     card_rects = []
     # Track clickable player rectangles
     player_rects = []
+    # Track discard buttons
+    discard_buttons = []
     # Track number buttons
     number_buttons = []
 
@@ -323,13 +325,8 @@ def draw_game_screen(game_instance, mouse_pos=(0, 0)):
     ]
 
     for i, player in enumerate(game_instance.playerList):
-        # old UI
+        # Use fixed positions (no rotation)
         x, y = player_positions[i]
-
-        # player = game_instance.playerList[playerPos]
-        x, y = player_positions[
-            (i - game_instance.currPlayerIndex) % game_instance.playerCount
-        ]
 
         # Player info box
         box_width = 200
@@ -425,6 +422,121 @@ def draw_game_screen(game_instance, mouse_pos=(0, 0)):
             # Draw pink border on card
             card_rect = pygame.Rect(card_x, card_y, 96, 134)
             pygame.draw.rect(WIN, PINK, card_rect, 2, border_radius=8)
+
+        # Draw small discard button to the left of player box
+        button_width = 50
+        button_height = 50
+        button_x = x - button_width - 10  # Position to the left
+        button_y = y + 10
+        button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+        discard_buttons.append((i, button_rect))
+
+        # Check if hovering
+        is_button_hovering = button_rect.collidepoint(mouse_pos)
+        button_color = ORANGE if is_button_hovering else PURPLE
+
+        # Draw button shadow
+        shadow_rect = button_rect.copy()
+        shadow_rect.x += 2
+        shadow_rect.y += 2
+        pygame.draw.rect(WIN, SHADOW_BLACK, shadow_rect, border_radius=8)
+
+        # Draw button background
+        pygame.draw.rect(WIN, button_color, button_rect, border_radius=8)
+
+        # Draw button border
+        pygame.draw.rect(WIN, PINK, button_rect, 2, border_radius=8)
+
+        # Button text - show count
+        discard_count = len(player.discardPile)
+        count_font = pygame.font.Font(None, 32)
+        count_text = count_font.render(str(discard_count), True, YELLOW)
+        count_rect = count_text.get_rect(center=button_rect.center)
+        WIN.blit(count_text, count_rect)
+
+        # Label below count
+        label_font = pygame.font.Font(None, 14)
+        label_text = label_font.render("Cards", True, FOREGROUND)
+        label_rect = label_text.get_rect(
+            center=(button_rect.centerx, button_rect.centery + 15)
+        )
+        WIN.blit(label_text, label_rect)
+
+        # If this player's discard is being viewed, show expanded discard pile
+        if viewing_discard_idx == i and len(player.discardPile) > 0:
+            # Draw expanded discard box below the button
+            discard_box_width = 220
+            discard_box_height = 180
+            discard_x = button_x - 10
+            discard_y = button_y + button_height + 10
+            discard_rect = pygame.Rect(
+                discard_x, discard_y, discard_box_width, discard_box_height
+            )
+
+            # Draw shadow
+            shadow_rect = discard_rect.copy()
+            shadow_rect.x += 3
+            shadow_rect.y += 3
+            pygame.draw.rect(WIN, SHADOW_BLACK, shadow_rect, border_radius=8)
+
+            # Draw background
+            pygame.draw.rect(WIN, CURRENT_LINE, discard_rect, border_radius=8)
+
+            # Draw border
+            for j in range(2):
+                border_rect = discard_rect.inflate(-j * 2, -j * 2)
+                pygame.draw.rect(WIN, CYAN, border_rect, 2, border_radius=8)
+
+            # Title
+            title_text = f"{player.name}'s Discard Pile"
+            title_surface = pygame.font.Font(None, 22).render(title_text, True, CYAN)
+            WIN.blit(title_surface, (discard_x + 10, discard_y + 8))
+
+            # Draw cards in grid
+            mini_card_width = 35
+            mini_card_height = 50
+            cards_per_row = 5
+            card_spacing = 5
+            start_x = discard_x + 10
+            start_y = discard_y + 35
+
+            for idx, card in enumerate(player.discardPile[-10:]):  # Show last 10
+                row = idx // cards_per_row
+                col = idx % cards_per_row
+
+                mini_x = start_x + col * (mini_card_width + card_spacing)
+                mini_y = start_y + row * (mini_card_height + card_spacing + 12)
+
+                # Draw mini card
+                mini_rect = pygame.Rect(
+                    mini_x, mini_y, mini_card_width, mini_card_height
+                )
+                pygame.draw.rect(WIN, CARD_BG, mini_rect, border_radius=4)
+                pygame.draw.rect(WIN, PINK, mini_rect, 1, border_radius=4)
+
+                # Card value
+                val_font = pygame.font.Font(None, 28)
+                val_surface = val_font.render(str(card.val), True, YELLOW)
+                val_rect = val_surface.get_rect(
+                    center=(mini_x + mini_card_width // 2, mini_y + 18)
+                )
+                WIN.blit(val_surface, val_rect)
+
+                # Card name
+                name_abbrev = card.name[:3] if len(card.name) > 3 else card.name
+                name_font = pygame.font.Font(None, 16)
+                name_surface = name_font.render(name_abbrev, True, FOREGROUND)
+                name_rect = name_surface.get_rect(
+                    center=(mini_x + mini_card_width // 2, mini_y + 38)
+                )
+                WIN.blit(name_surface, name_rect)
+
+            # Show count if more than 10
+            if len(player.discardPile) > 10:
+                more_text = pygame.font.Font(None, 18).render(
+                    f"+{len(player.discardPile) - 10} more", True, COMMENT
+                )
+                WIN.blit(more_text, (discard_x + 140, discard_y + 155))
 
     # Draw current player's hand at bottom center with actual card images
     if len(game_instance.currPlayer.hand) > 0:
@@ -592,7 +704,7 @@ def draw_game_screen(game_instance, mouse_pos=(0, 0)):
     pygame.display.update()
 
     # Return all clickable rectangles
-    return card_rects, player_rects, number_buttons
+    return card_rects, player_rects, number_buttons, discard_buttons
 
 
 def main():
@@ -611,9 +723,13 @@ def main():
     card_rects = []
     player_rects = []
     number_buttons = []
+    discard_buttons = []
 
     # Track mouse position
     mouse_pos = (0, 0)
+
+    # Track which player's discard is being viewed
+    viewing_discard_idx = None
 
     while run:
         clock.tick(FPS)
@@ -695,10 +811,22 @@ def main():
                                 )  # Actually call the method!
                                 break
 
+                    # Check if clicked on a discard button
+                    if game_instance and len(discard_buttons) > 0:
+                        for player_idx, rect in discard_buttons:
+                            if rect.collidepoint(mouse_pos):
+                                # Toggle discard view
+                                if viewing_discard_idx == player_idx:
+                                    viewing_discard_idx = None
+                                else:
+                                    viewing_discard_idx = player_idx
+                                print(f"Toggled discard view for player {player_idx}")
+                                break
+
             # FIXED: Draw AFTER processing events, only once per frame
             if game_instance:
-                card_rects, player_rects, number_buttons = draw_game_screen(
-                    game_instance, mouse_pos
+                card_rects, player_rects, number_buttons, discard_buttons = (
+                    draw_game_screen(game_instance, mouse_pos, viewing_discard_idx)
                 )
 
     pygame.quit()
