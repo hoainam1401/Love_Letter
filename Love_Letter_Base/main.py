@@ -4,7 +4,7 @@ import os
 from game import GameInstance
 
 FPS = 60
-WIDTH = 800
+WIDTH = 1000
 HEIGHT = 1000
 
 pygame.init()
