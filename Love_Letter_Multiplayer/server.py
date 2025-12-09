@@ -70,6 +70,7 @@ class Server:
                 print("Done packing")
         while True:
             # unload data from client
+            print("waiting for data back from client")
             data = client.recv(1024).decode()
             dataDict = json.loads(data)
             print(f"received from client: {dataDict}")

@@ -72,6 +72,21 @@ def connect():
     write_thread.start()
 
 
+def sendToServer():
+    global gameState, client
+    client.sendall(
+        json.dumps(
+            {
+                "selectedCardIndex": selectedCardIndex,
+                "selectedTargetIndex": selectedTargetIndex,
+                "selectedGuess": selectedGuess,
+            }
+        ).encode()
+    )
+    print("Done packing")
+    gameState = "WAITING_FOR_TURN"
+
+
 # -------------- GAME ROUND LOGIC ---------------
 # game runs based on user inputs in terminal
 def cardNeedsTarget(cardName: str) -> bool:
@@ -154,16 +169,7 @@ def selectCard(cardIndex: int):
     # Card doesn't need any info or no valid target, play it immediately
     if (not cardNeedsGuess(cardName) and not cardNeedsTarget(cardName)) or valid == 0:
         # send data that you want to execute
-        client.sendall(
-            json.dumps(
-                {
-                    "selectedCardIndex": selectedCardIndex,
-                    "selectedTargetIndex": selectedTargetIndex,
-                    "selectedGuess": selectedGuess,
-                }
-            ).encode()
-        )
-        gameState = "WAITING_FOR_TURN"
+        sendToServer()
     else:
         gameState = "WAITING_FOR_TARGET"
         print(f"Card {cardName} needs a target. Select a player.")
@@ -190,17 +196,7 @@ def selectTarget(playerIndex: int):
         print("Now guess a number (2-8)")
     else:
         # We have everything we need
-        client.sendall(
-            json.dumps(
-                {
-                    "selectedCardIndex": selectedCardIndex,
-                    "selectedTargetIndex": selectedTargetIndex,
-                    "selectedGuess": selectedGuess,
-                }
-            ).encode()
-        )
-        gameState = "WAITING_FOR_TURN"
-        pass
+        sendToServer()
 
 
 def selectGuess(guessNum: int):
@@ -218,16 +214,7 @@ def selectGuess(guessNum: int):
     selectedGuess = guessNum
 
     # Now we have everything
-    client.sendall(
-        json.dumps(
-            {
-                "selectedCardIndex": selectedCardIndex,
-                "selectedTargetIndex": selectedTargetIndex,
-                "selectedGuess": selectedGuess,
-            }
-        ).encode()
-    )
-    gameState = "WAITING_FOR_TURN"
+    sendToServer()
 
 
 # ------------- GAME UI ------------
@@ -418,7 +405,8 @@ def draw_game_screen(mouse_pos=(0, 0)):
         (50, HEIGHT // 2 - 150),  # Left (player 4)
     ]
     for i in range(len(nameList)):
-        x, y = player_positions[(i - posInList) % len(nameList)]
+        clientPlusPos = (i - posInList) % len(nameList)
+        x, y = player_positions[clientPlusPos]
 
         # Player info box
         box_width = 200
@@ -428,9 +416,9 @@ def draw_game_screen(mouse_pos=(0, 0)):
         # NEW: Check if this player can be targeted
         is_valid_target = False
         if gameState == "WAITING_FOR_TARGET":
-            is_valid_target = isValidTarget(i)
+            is_valid_target = isValidTarget(clientPlusPos)
             if is_valid_target:
-                player_rects.append((i, box_rect))
+                player_rects.append((clientPlusPos, box_rect))
 
         # Check if hovering over this player
         is_hovering = box_rect.collidepoint(mouse_pos)
@@ -479,6 +467,7 @@ def draw_game_screen(mouse_pos=(0, 0)):
             card_y = y + 110
             # PERFORMANCE: Use pre-scaled image instead of scaling every frame
             WIN.blit(SMALL_CARD_BACK, (card_x, card_y))
+    player_rects.sort(key=lambda tup: tup[0])
 
     # Draw current player's hand at bottom center with actual card images
     if len(handName) > 0:
@@ -593,7 +582,6 @@ def main():
     global state, gameState, handName
     state = STATE_MENU
     selected_player_count = 0
-    game_instance = None
 
     # Store clickable elements
     card_rects = []
@@ -616,10 +604,6 @@ def main():
                 # Check start button
                 if start_button and start_button.handle_event(event):
                     client.sendall("start".encode())
-                    # try:
-                    #     state = STATE_GAME
-                    # except ValueError as e:
-                    #     print(f"Error creating game: {e}")
 
         elif state == STATE_GAME:
             for event in pygame.event.get():
@@ -630,7 +614,6 @@ def main():
                         # Return to menu
                         state = STATE_MENU
                         selected_player_count = 0
-                        game_instance = None
 
                 # Track mouse motion
                 elif event.type == pygame.MOUSEMOTION:
@@ -649,7 +632,6 @@ def main():
                                 selectedCardIndex = -1
                                 selectedTargetIndex = -1
                                 selectedGuess = -1
-                                gameState = "WAITING_FOR_TURN"
                                 break  # Only handle one click
 
                     # Check if clicked on a player
@@ -657,18 +639,17 @@ def main():
                         for player_idx, rect in player_rects:
                             if rect.collidepoint(mouse_pos):
                                 print(
-                                    f"Clicked player {player_idx}: {nameList[player_idx].name}"
+                                    f"Clicked player {player_idx}: {nameList[player_idx]}"
                                 )
                                 selectTarget(player_idx)
                                 # reset selection
                                 selectedCardIndex = -1
                                 selectedTargetIndex = -1
                                 selectedGuess = -1
-                                gameState = "WAITING_FOR_TURN"
                                 break
 
                     # Check if clicked on a number button
-                    if game_instance and len(number_buttons) > 0:
+                    if len(number_buttons) > 0:
                         for num, rect in number_buttons:
                             if rect.collidepoint(mouse_pos):
                                 print(f"Guessed number: {num}")
@@ -677,7 +658,6 @@ def main():
                                 selectedCardIndex = -1
                                 selectedTargetIndex = -1
                                 selectedGuess = -1
-                                gameState = "WAITING_FOR_TURN"
                                 break
             card_rects, player_rects, number_buttons = draw_game_screen(mouse_pos)
 
