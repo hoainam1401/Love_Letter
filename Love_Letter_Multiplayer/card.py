@@ -1,6 +1,3 @@
-from abc import abstractmethod
-
-
 class Card:
     name: str = ""
     val: int = 0

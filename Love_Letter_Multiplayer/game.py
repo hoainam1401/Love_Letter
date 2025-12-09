@@ -5,14 +5,13 @@ import random
 
 
 class GameInstance:
-    playerList: list[Player]  # FIXED: Removed default [] to avoid shared state
+    playerList: list[Player]
     cardPile: CardPile
-    currPlayer: Player  # current "Player" in round
-    currPlayerIndex: int  # position of "currPlayer"
+    currPlayer: Player
+    currPlayerIndex: int
     playerCount: int
     alivePlayerCount: int
     gameState: str
-    # attributes to track playing card
     selectedCardIndex: int
     selectedTargetIndex: int
     selectedGuess: int

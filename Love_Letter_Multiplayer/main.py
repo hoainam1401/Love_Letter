@@ -1,4 +1,4 @@
-import pygame  # type: ignore
+import pygame 
 import sys
 import os
 from game import GameInstance
@@ -502,4 +502,4 @@ def main(nameList=[]):
 
 
 if __name__ == "__main__":
-    main(["AA", "BB", "CC"])
+    pass
