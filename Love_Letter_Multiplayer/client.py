@@ -21,13 +21,14 @@ hasKing = 0
 remainingCount = -1
 winningTokenCount = 0
 state = ""
+gameStarted = False
 STATE_MENU = 0
 STATE_GAME = 1
 
 
 # --------- NETWORK LOGIC ---------------
 def connect():
-    global client, remainingCount
+    global client
     nickname = input("Please enter a nickname: ")
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect(("25.14.115.139", 21011))  # lan ip of host
@@ -37,7 +38,10 @@ def connect():
     def receive():
         while True:
             try:
-                global state, nameList, currIndex, playerStatus, hasCountess, hasPrince, hasKing, remainingCount, gameState, handName, posInList
+                global state, nameList, currIndex, playerStatus, hasCountess, hasPrince, hasKing, remainingCount, gameState, handName, posInList, gameStarted
+                if not gameStarted:
+                    # client.sendall("game started".encode())
+                    pass
                 data = client.recv(1024).decode()
                 dataDict = json.loads(data)
                 print(dataDict)
@@ -61,8 +65,7 @@ def connect():
     def write():
         client.sendall(nickname.encode())
         while True:
-            # message = f"{nickname}: {input("")}"
-            message = input("\nSend command to server: ")
+            message = input("")
             client.sendall(message.encode())
 
     receive_thread = threading.Thread(target=receive)
@@ -74,15 +77,15 @@ def connect():
 
 def sendToServer():
     global gameState, client
-    client.sendall(
-        json.dumps(
-            {
-                "selectedCardIndex": selectedCardIndex,
-                "selectedTargetIndex": selectedTargetIndex,
-                "selectedGuess": selectedGuess,
-            }
-        ).encode()
-    )
+    data = json.dumps(
+        {
+            "selectedCardIndex": selectedCardIndex,
+            "selectedTargetIndex": selectedTargetIndex,
+            "selectedGuess": selectedGuess,
+        }
+    ).encode()
+    client.sendall(data)
+    print(data)
     print("Done packing")
     gameState = "WAITING_FOR_TURN"
 
@@ -366,7 +369,7 @@ def draw_game_screen(mouse_pos=(0, 0)):
     # Track number buttons
     number_buttons = []
 
-    global remainingCount, handName
+    global remainingCount, handName, posInList
 
     # Title bar
     title_bar = pygame.Rect(0, 0, WIDTH, 80)
@@ -404,9 +407,11 @@ def draw_game_screen(mouse_pos=(0, 0)):
         (WIDTH // 2 - 100, 100),  # Top (player 3)
         (50, HEIGHT // 2 - 150),  # Left (player 4)
     ]
+    for i in range(posInList):
+        player_positions.insert(0, player_positions.pop())
+
     for i in range(len(nameList)):
-        clientPlusPos = (i - posInList) % len(nameList)
-        x, y = player_positions[clientPlusPos]
+        x, y = player_positions[i]
 
         # Player info box
         box_width = 200
@@ -416,9 +421,9 @@ def draw_game_screen(mouse_pos=(0, 0)):
         # NEW: Check if this player can be targeted
         is_valid_target = False
         if gameState == "WAITING_FOR_TARGET":
-            is_valid_target = isValidTarget(clientPlusPos)
+            is_valid_target = isValidTarget(i)
             if is_valid_target:
-                player_rects.append((clientPlusPos, box_rect))
+                player_rects.append((i, box_rect))
 
         # Check if hovering over this player
         is_hovering = box_rect.collidepoint(mouse_pos)

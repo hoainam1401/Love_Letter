@@ -33,56 +33,66 @@ class Server:
             client.sendall((message + "\n").encode())
 
     def handle(self, client: socket.socket):
-        message: str = client.recv(1024).decode()
-        if message == "start":
-            self.gameInstance = GameInstance(self.nicknames)
-            playerStatus = []
-            for player in self.gameInstance.playerList:
-                if player.isKO:
-                    playerStatus.append("KO")
-                elif player.isProtected:
-                    playerStatus.append("Protected")
-                else:
-                    playerStatus.append("No Protection")
-            for i, client in enumerate(self.clients):
-                gameStateClient = (
-                    "WAITING_FOR_CARD"
-                    if self.gameInstance.currPlayerIndex == i
-                    else "WAITING_FOR_TURN"
-                )
-                handName = []
-                for card in self.gameInstance.playerList[i].hand:
-                    handName.append(card.name)
-                dataDict = {
-                    "posInList": i,
-                    "nameList": self.nicknames,
-                    "currIndex": self.gameInstance.currPlayerIndex,
-                    "playerStatus": playerStatus,
-                    "hasCountess": self.gameInstance.currPlayer.hasCountess,
-                    "hasPrince": self.gameInstance.currPlayer.hasPrince,
-                    "hasKing": self.gameInstance.currPlayer.hasKing,
-                    "remainingCount": self.gameInstance.remainingCount(),
-                    "gameState": gameStateClient,
-                    "handName": handName,
-                }
-                print(dataDict)
-                client.sendall(json.dumps(dataDict).encode())
-                print("Done packing")
-        while True:
-            # unload data from client
-            print("waiting for data back from client")
-            data = client.recv(1024).decode()
-            dataDict = json.loads(data)
-            print(f"received from client: {dataDict}")
+        try:
+            message: str = client.recv(1024).decode()
+            if message == "start" and self.gameInstance == None:
+                self.gameInstance = GameInstance(self.nicknames)
+                playerStatus = []
+                for player in self.gameInstance.playerList:
+                    if player.isKO:
+                        playerStatus.append("KO")
+                    elif player.isProtected:
+                        playerStatus.append("Protected")
+                    else:
+                        playerStatus.append("No Protection")
+                for i, client in enumerate(self.clients):
+                    gameStateClient = (
+                        "WAITING_FOR_CARD"
+                        if self.gameInstance.currPlayerIndex == i
+                        else "WAITING_FOR_TURN"
+                    )
+                    handName = []
+                    for card in self.gameInstance.playerList[i].hand:
+                        handName.append(card.name)
+                    dataDict = {
+                        "posInList": i,
+                        "nameList": self.nicknames,
+                        "currIndex": self.gameInstance.currPlayerIndex,
+                        "playerStatus": playerStatus,
+                        "hasCountess": self.gameInstance.currPlayer.hasCountess,
+                        "hasPrince": self.gameInstance.currPlayer.hasPrince,
+                        "hasKing": self.gameInstance.currPlayer.hasKing,
+                        "remainingCount": self.gameInstance.remainingCount(),
+                        "gameState": gameStateClient,
+                        "handName": handName,
+                    }
+                    print(dataDict)
+                    client.sendall(json.dumps(dataDict).encode())
+                    print("Done packing")
+            while True:
+                # unload data from client
+                index = self.clients.index(client)
+                clientName = self.nicknames[index]
+                print(f"waiting for data back from client: {clientName}")
+                data = client.recv(1024).decode()
+                dataDict = json.loads(data)
+                print(f"received from client: {dataDict}")
+        except Exception as e:
+            # remove leaving clients from list
+            print(f"An error occurred: {e}")
+            index = self.clients.index(client)
+            self.clients.remove(client)
+            nickname = self.nicknames[index]
+            self.nicknames.remove(nickname)
+            client.close()
 
     def receive(self):
         while True:
             client, address = self.server.accept()
             print(f"Connected with {str(address)}")
             nickname = client.recv(1024).decode()
-            if client not in self.clients:
-                self.nicknames.append(nickname)
-                self.clients.append(client)
+            self.nicknames.append(nickname)
+            self.clients.append(client)
             print(f"Nickname of the client is {nickname}")
             print(f"{nickname} joined the lobby!")
             thread = Thread(target=self.handle, args=(client,))
