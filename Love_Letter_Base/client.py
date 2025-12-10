@@ -19,7 +19,7 @@ hasCountess = 0
 hasPrince = 0
 hasKing = 0
 remainingCount = -1
-winningTokenCount = 0
+winningTokenCountList: list[int] = []
 state = ""
 gameStarted = False
 valid = 0
@@ -40,7 +40,7 @@ def connect():
         client.sendall(nickname.encode())
         while True:
             try:
-                global state, nameList, currIndex, playerStatus, hasCountess, hasPrince, hasKing, remainingCount, gameState, handName, posInList, gameStarted, valid
+                global state, nameList, currIndex, playerStatus, hasCountess, hasPrince, hasKing, remainingCount, gameState, handName, posInList, gameStarted, valid, winningTokenCountList
                 if not gameStarted:
                     # client.sendall("game started".encode())
                     pass
@@ -58,6 +58,7 @@ def connect():
                 gameState = dataDict["gameState"]
                 print(f"Current state after receiving is: {gameState}")
                 handName = dataDict["handName"]
+                winningTokenCountList = dataDict["winningTokenCountList"]
                 state = STATE_GAME
                 valid = 0
             except Exception as e:
@@ -365,7 +366,7 @@ def draw_game_screen(mouse_pos=(0, 0)):
     # Track number buttons
     number_buttons = []
 
-    global remainingCount, handName, posInList
+    global remainingCount, handName, posInList, winningTokenCountList
 
     # Title bar
     title_bar = pygame.Rect(0, 0, WIDTH, 80)
@@ -458,7 +459,9 @@ def draw_game_screen(mouse_pos=(0, 0)):
         WIN.blit(status_surface, status_rect)
 
         # Tokens
-        tokens = SMALL_FONT.render(f"Tokens: {winningTokenCount}", True, FOREGROUND)
+        tokens = SMALL_FONT.render(
+            f"Tokens: {winningTokenCountList[i]}", True, FOREGROUND
+        )
         tokens_rect = tokens.get_rect(center=(x + box_width // 2, y + 85))
         WIN.blit(tokens, tokens_rect)
 

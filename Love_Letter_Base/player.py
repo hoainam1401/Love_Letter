@@ -13,8 +13,7 @@ class Player:
     finalPoint: int
     winningTokenCount: int
 
-    def __init__(self, name: str):
-        self.name = name
+    def resetPlayer(self):
         self.hand: list[Card] = []
         self.discardPile: list[Card] = []
         self.isKO: bool = False
@@ -23,7 +22,11 @@ class Player:
         self.hasKing: int = 0
         self.hasCountess: int = 0
         self.finalPoint: int = 0
+
+    def __init__(self, name: str):
+        self.name = name
         self.winningTokenCount: int = 0
+        self.resetPlayer()
 
     def discard(self, card: Card):
         self.discardPile.append(card)

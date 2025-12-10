@@ -34,6 +34,7 @@ class Server:
 
     def sendToClients(self):
         playerStatus = []
+        winningTokenCountList = []
         for player in self.gameInstance.playerList:
             if player.isKO:
                 playerStatus.append("KO")
@@ -41,6 +42,7 @@ class Server:
                 playerStatus.append("Protected")
             else:
                 playerStatus.append("No Protection")
+            winningTokenCountList.append(player.winningTokenCount)
         for i, client in enumerate(self.clients):
             gameStateClient = (
                 "WAITING_FOR_CARD"
@@ -55,12 +57,13 @@ class Server:
                 "nameList": self.nicknames,
                 "currIndex": self.gameInstance.currPlayerIndex,
                 "playerStatus": playerStatus,
-                "hasCountess": self.gameInstance.currPlayer.hasCountess,
-                "hasPrince": self.gameInstance.currPlayer.hasPrince,
-                "hasKing": self.gameInstance.currPlayer.hasKing,
+                "hasCountess": self.gameInstance.playerList[i].hasCountess,
+                "hasPrince": self.gameInstance.playerList[i].hasPrince,
+                "hasKing": self.gameInstance.playerList[i].hasKing,
                 "remainingCount": self.gameInstance.remainingCount(),
                 "gameState": gameStateClient,
                 "handName": handName,
+                "winningTokenCountList": winningTokenCountList,
             }
             print(dataDict)
             client.sendall(json.dumps(dataDict).encode())

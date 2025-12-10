@@ -17,6 +17,7 @@ class GameInstance:
     selectedTargetIndex: int
     selectedGuess: int
     valid: int  # track number of valid targets
+    winners: list[Player]
 
     # these are avaiable in extended edition
     # jesterPair: tuple
@@ -26,6 +27,20 @@ class GameInstance:
     # maxPlayersChosen = 0
     # count of currently chosen "Player"
     # chosenPlayerCount = 0
+    def resetTable(self):
+        self.playerCount = len(self.playerList)
+        self.alivePlayerCount = len(self.playerList)
+        for player in self.playerList:
+            player.resetPlayer()
+        self.cardPile = CardPile()
+        self.currPlayerIndex = random.choice(range(self.playerCount))
+        self.currPlayer = self.playerList[self.currPlayerIndex]
+        self.deal()
+        self.printPlayerHands()
+        self.gameState = "WAITING_FOR_CARD"
+        self.selectedCardIndex = -1
+        self.selectedTargetIndex = -1
+        self.selectedGuess = -1
 
     def __init__(self, nameList: list[str]):
         print("----------------------------------------")
@@ -41,17 +56,7 @@ class GameInstance:
         for name in nameList:
             self.playerList.append(Player(name))
         self.printPlayers()
-        self.playerCount = len(nameList)
-        self.alivePlayerCount = len(nameList)
-        self.cardPile = CardPile()
-        self.currPlayerIndex = random.choice(range(self.playerCount))
-        self.currPlayer = self.playerList[self.currPlayerIndex]
-        self.deal()
-        self.printPlayerHands()
-        self.gameState = "WAITING_FOR_CARD"
-        self.selectedCardIndex = -1
-        self.selectedTargetIndex = -1
-        self.selectedGuess = -1
+        self.resetTable()
 
     # -------------- GAME ROUND LOGIC ---------------
 
@@ -190,27 +195,23 @@ class GameInstance:
         self.selectedGuess = -1
 
         # Move to next player
-        endGame = self.isEndGame()
-        if not endGame[0]:
+        if not self.isEndGame():
             self.nextPlayer()
         else:
-            # announce the winner(s)
-            if len(endGame[1]) > 1:
-                s = ""
-                for player in endGame[1]:
-                    s += f"{player.name} "
-                print(f"{s} are the winner!")
-            else:
-                print(f"{endGame[1][0].name} is the winner!")
+            print(f"winning players are: {self.winners}")
             self.gameState = "GAME_ENDED"
+            # after game has ended, begins a new game
+            # just for testing the tokens counting function
+            self.resetTable()
 
     def isEndGame(self):
-        winner: list[Player] = []
+        self.winners = []
         # winner is the sole survivor
         if self.alivePlayerCount == 1:
             for player in self.playerList:
                 if not player.isKO:
-                    winner.append(player)
+                    self.winners = [player.name]
+                    player.winningTokenCount += 1
         # calculate who has the highest score
         # if multiple players have same score,
         # there would be multiple winners
@@ -219,11 +220,13 @@ class GameInstance:
             for player in self.playerList:
                 if not player.isKO and player.hand[0].val > max:
                     max = player.hand[0].val
-                    winner.append(player)
+                    self.winners.append(player)
+                    player.winningTokenCount += 1
             for player in self.playerList:
                 if not player.isKO and player.hand[0].val == max:
-                    winner.append(player)
-        return (self.alivePlayerCount == 1 or len(self.cardPile.cardList) < 2, winner)
+                    self.winners.append(player)
+                    player.winningTokenCount += 1
+        return self.alivePlayerCount == 1 or len(self.cardPile.cardList) < 2
 
     # play a card with extra parameters, provide infomations
     # to execute card actions correctly
