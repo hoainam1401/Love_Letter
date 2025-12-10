@@ -22,6 +22,7 @@ remainingCount = -1
 winningTokenCount = 0
 state = ""
 gameStarted = False
+valid = 0
 STATE_MENU = 0
 STATE_GAME = 1
 
@@ -36,9 +37,10 @@ def connect():
 
     # receive data from server
     def receive():
+        client.sendall(nickname.encode())
         while True:
             try:
-                global state, nameList, currIndex, playerStatus, hasCountess, hasPrince, hasKing, remainingCount, gameState, handName, posInList, gameStarted
+                global state, nameList, currIndex, playerStatus, hasCountess, hasPrince, hasKing, remainingCount, gameState, handName, posInList, gameStarted, valid
                 if not gameStarted:
                     # client.sendall("game started".encode())
                     pass
@@ -57,31 +59,25 @@ def connect():
                 print(f"Current state after receiving is: {gameState}")
                 handName = dataDict["handName"]
                 state = STATE_GAME
+                valid = 0
             except Exception as e:
                 print(f"An error occurred: {e}")
                 client.close()
                 break
 
-    def write():
-        client.sendall(nickname.encode())
-        while True:
-            message = input("")
-            client.sendall(message.encode())
-
     receive_thread = threading.Thread(target=receive)
     receive_thread.start()
-
-    write_thread = threading.Thread(target=write)
-    write_thread.start()
 
 
 def sendToServer():
     global gameState, client
+    client.sendall(b"data")
     data = json.dumps(
         {
             "selectedCardIndex": selectedCardIndex,
             "selectedTargetIndex": selectedTargetIndex,
             "selectedGuess": selectedGuess,
+            "valid": valid,
         }
     ).encode()
     client.sendall(data)
@@ -145,7 +141,7 @@ def isValidTarget(playerIndex: int) -> bool:
 # -------------- DURING PLAYER TURN ---------------
 def selectCard(cardIndex: int):
     """Called when player clicks a card in their hand"""
-    global gameState, selectedCardIndex, selectedTargetIndex, selectedGuess, handName
+    global gameState, selectedCardIndex, selectedTargetIndex, selectedGuess, handName, valid
     print(f"Game state while trying to select a card = {gameState}")
     if gameState != "WAITING_FOR_CARD":
         print("Not waiting for card selection!")
@@ -608,6 +604,7 @@ def main():
 
                 # Check start button
                 if start_button and start_button.handle_event(event):
+                    client.sendall("message".encode())
                     client.sendall("start".encode())
 
         elif state == STATE_GAME:
