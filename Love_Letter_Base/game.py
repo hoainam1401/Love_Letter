@@ -211,7 +211,6 @@ class GameInstance:
             for player in self.playerList:
                 if not player.isKO:
                     self.winners = [player.name]
-                    player.winningTokenCount += 1
         # calculate who has the highest score
         # if multiple players have same score,
         # there would be multiple winners
@@ -221,11 +220,12 @@ class GameInstance:
                 if not player.isKO and player.hand[0].val > max:
                     max = player.hand[0].val
                     self.winners.append(player)
-                    player.winningTokenCount += 1
             for player in self.playerList:
                 if not player.isKO and player.hand[0].val == max:
                     self.winners.append(player)
-                    player.winningTokenCount += 1
+        for player in self.playerList:
+            if player.name in self.winners:
+                player.winningTokenCount += 1
         return self.alivePlayerCount == 1 or len(self.cardPile.cardList) < 2
 
     # play a card with extra parameters, provide infomations
