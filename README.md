@@ -12,7 +12,8 @@ Love Letter is a **multiplayer card game**. The game logic is implemented in Pyt
 - The game is **fully playable with multiple players** over a LAN network using a local server.  
 - Core gameplay mechanics are implemented.  
 - Basic game logic and turn system are fully functional.  
-- Players can interact with the game in real-time through the client interface connected to the local server. 
+- Players can interact with the game in real-time through the client interface connected to the local server.
+
 **Planned Features**  
 - Complete the **GUI** for a polished user experience  
 - Implement an **offline mode with bots**
