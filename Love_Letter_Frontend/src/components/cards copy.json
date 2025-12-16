@@ -1,0 +1,104 @@
+[
+    {
+        "value": 0,
+        "name": "Assassin",
+        "max": 1,
+        "description": "If you have this card in your hand when another player chooses you as part of a guards effect, they are knocked out of the round and you aren't. Discard this card and draw a new card."
+    },
+    {
+        "value": 0,
+        "name": "Jester",
+        "max": 1,
+        "description": "Choose another player and give them a jester token. If they win this round, you gain an affection token."
+    },
+    {
+        "value": 1,
+        "name": "Guard",
+        "max": "5/8",
+        "description": "Choose another player and name a number other than one. If their card is that number, they are knocked out of the round."
+    },
+    {
+        "value": 2,
+        "name": "Priest",
+        "max": 2,
+        "description": "Look at another player's hand."
+    },
+    {
+        "value": 2,
+        "name": "Cardinal",
+        "max": 2,
+        "description": "Choose two players. They must trade hands. Look at one of their hands."
+    },
+    {
+        "value": 3,
+        "name": "Baron",
+        "max": 2,
+        "description": "Choose another player and secretly compare hands. Player with the lower number is out of the round."
+    },
+    {
+        "value": 3,
+        "name": "Baroness",
+        "max": 2,
+        "description": "Choose up to two players and look at their hands."
+    },
+    {
+        "value": 4,
+        "name": "Handmavalue",
+        "max": 2,
+        "description": "You cannot be chosen as part of the effects of another player's cards until the start of your next turn"
+    },
+    {
+        "value": 4,
+        "name": "Sycophant",
+        "max": 2,
+        "description": "Choose any player. If the next card played has an effect that requires one or more players to be chosen, they must be one of them"
+    },
+    {
+        "value": 5,
+        "name": "Prince",
+        "max": 2,
+        "description": "Choose any player. They must discard their hand and draw a new card."
+    },
+    {
+        "value": 5,
+        "name": "Count",
+        "max": 2,
+        "description": "If this card is in your discard pile at the end of the round, add one to the number of the card in your hand. Resolve ties normally."
+    },
+    {
+        "value": 6,
+        "name": "King",
+        "max": 1,
+        "description": "Choose another player and trade hands with them."
+    },
+    {
+        "value": 6,
+        "name": "Constable",
+        "max": 1,
+        "description": "If this card is in your discard pile when you were knocked out of the round, gain an affection token."
+    },
+    {
+        "value": 7,
+        "name": "Countess",
+        "max": 1,
+        "description": "If you have this card and the King or Prince is in your hand, you must discard this card."
+    },
+    {
+        "value": 7,
+        "name": "Dowager Queen",
+        "max": 1,
+        "description": "Choose another player and secretly compare hands. Player with the higher number is out of the round."
+    },
+    {
+        "value": 8,
+        "name": "Princess",
+        "max": 1,
+        "description": "If you discard this card, you are immediately knocked out of the round."
+    },
+    {
+        "value": 9,
+        "name": "Bishop",
+        "max": 1,
+        "description": "Choose another player and name a number other than one. If their card is that number, gain an affection token, then they may discard their card and draw a new one. At the end of the round, the Princess beats this card."
+    }
+]
