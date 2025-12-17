@@ -208,10 +208,10 @@ class GameInstance:
         self.winners = []
         # Check if game should end
         game_over = self.alivePlayerCount == 1 or self.remainingCount() < 2
-        
+
         if not game_over:
             return False
-        
+
         # Determine winners
         # winner is the sole survivor
         if self.alivePlayerCount == 1:
@@ -222,19 +222,27 @@ class GameInstance:
         else:
             max_val = 0
             for player in self.playerList:
-                if not player.isKO and len(player.hand) > 0 and player.hand[0].val > max_val:
+                if (
+                    not player.isKO
+                    and len(player.hand) > 0
+                    and player.hand[0].val > max_val
+                ):
                     max_val = player.hand[0].val
-            
+
             # Find all players with the max value
             for player in self.playerList:
-                if not player.isKO and len(player.hand) > 0 and player.hand[0].val == max_val:
+                if (
+                    not player.isKO
+                    and len(player.hand) > 0
+                    and player.hand[0].val == max_val
+                ):
                     self.winners.append(player.name)
-        
+
         # Award tokens to winners
         for player in self.playerList:
             if player.name in self.winners:
                 player.winningTokenCount += 1
-        
+
         return True
 
     # play a card with extra parameters, provide infomations

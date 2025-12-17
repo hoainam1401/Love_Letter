@@ -164,6 +164,7 @@ CARD_IMAGES = load_card_images()
 # Pre-create small card back for player boxes (avoid scaling every frame)
 SMALL_CARD_BACK = pygame.transform.scale(CARD_IMAGES["Back"], (96, 134))
 
+
 # Load crown image for winner screen
 def load_crown_image():
     crown_path = "images/crown.png"
@@ -179,6 +180,7 @@ def load_crown_image():
         text_rect = text.get_rect(center=(25, 25))
         surf.blit(text, text_rect)
         return surf
+
 
 CROWN_IMAGE = load_crown_image()
 
@@ -327,7 +329,7 @@ def draw_game_end_screen(winners, player_list):
         crown_left_x = name_rect.left - 60
         crown_left_y = y_offset - 25  # Center vertically with text
         WIN.blit(CROWN_IMAGE, (crown_left_x, crown_left_y))
-        
+
         # Right crown
         crown_right_x = name_rect.right + 10
         crown_right_y = y_offset - 25  # Center vertically with text
@@ -964,7 +966,9 @@ def main():
                 )
 
         elif state == STATE_GAME_END:
-            print(f"Entered STATE_GAME_END, game_instance exists: {game_instance is not None}")
+            print(
+                f"Entered STATE_GAME_END, game_instance exists: {game_instance is not None}"
+            )
             if game_instance:
                 print(f"Drawing game end screen with winners: {game_instance.winners}")
                 try:
@@ -993,6 +997,7 @@ def main():
                 except Exception as e:
                     print(f"Error in game end screen: {e}")
                     import traceback
+
                     traceback.print_exc()
                     # Fall back to menu
                     state = STATE_MENU
