@@ -1,6 +1,7 @@
 import pygame  # type: ignore
 import sys
 import os
+import random
 from game import GameInstance
 
 FPS = 60
@@ -163,6 +164,24 @@ CARD_IMAGES = load_card_images()
 # Pre-create small card back for player boxes (avoid scaling every frame)
 SMALL_CARD_BACK = pygame.transform.scale(CARD_IMAGES["Back"], (96, 134))
 
+# Load crown image for winner screen
+def load_crown_image():
+    crown_path = "images/crown.png"
+    if os.path.exists(crown_path):
+        crown_img = pygame.image.load(crown_path)
+        return pygame.transform.scale(crown_img, (50, 50))  # Scale to appropriate size
+    else:
+        # Create a placeholder if crown doesn't exist
+        surf = pygame.Surface((50, 50))
+        surf.fill(GOLD)
+        font = pygame.font.Font(None, 40)
+        text = font.render("♕", True, BLACK)
+        text_rect = text.get_rect(center=(25, 25))
+        surf.blit(text, text_rect)
+        return surf
+
+CROWN_IMAGE = load_crown_image()
+
 
 class Button:
     def __init__(self, x, y, width, height, text, color):
@@ -248,6 +267,114 @@ def draw_player_selection_screen(selected_count):
 
     pygame.display.update()
     return buttons, start_button
+
+
+def draw_game_end_screen(winners, player_list):
+    """Draw the game end screen with winner announcement and options"""
+    WIN.fill(BACKGROUND)
+
+    # Safety check
+    if not winners:
+        winners = ["No Winner"]
+
+    # Animated background effect (optional sparkles/stars)
+    for i in range(20):
+        x = random.randint(0, WIDTH)
+        y = random.randint(0, HEIGHT)
+        size = random.randint(2, 6)
+        alpha = random.randint(100, 255)
+        star_surf = pygame.Surface((size, size))
+        star_surf.set_alpha(alpha)
+        star_surf.fill(YELLOW)
+        WIN.blit(star_surf, (x, y))
+
+    # Large "WINNER!" text in Balatro style
+    winner_text = "WINNER!"
+    # Draw multiple shadow layers for depth
+    for i in range(5, 0, -1):
+        shadow = TITLE_FONT.render(winner_text, True, SHADOW_BLACK)
+        shadow_rect = shadow.get_rect(center=(WIDTH // 2 + i * 3, 150 + i * 3))
+        WIN.blit(shadow, shadow_rect)
+
+    # Draw main text with gold color
+    winner_surface = TITLE_FONT.render(winner_text, True, GOLD)
+    winner_rect = winner_surface.get_rect(center=(WIDTH // 2, 150))
+    WIN.blit(winner_surface, winner_rect)
+
+    # Draw glow effect around winner text
+    for i in range(3):
+        glow_rect = winner_rect.inflate(20 + i * 10, 20 + i * 10)
+        glow_surf = pygame.Surface((glow_rect.width, glow_rect.height))
+        glow_surf.set_alpha(30 - i * 10)
+        glow_surf.fill(GOLD)
+        WIN.blit(glow_surf, glow_rect)
+
+    # Display winner names
+    y_offset = 280
+    for winner_name in winners:
+        # Shadow
+        name_shadow = BUTTON_FONT.render(winner_name, True, SHADOW_BLACK)
+        name_rect = name_shadow.get_rect(center=(WIDTH // 2 + 3, y_offset + 3))
+        WIN.blit(name_shadow, name_rect)
+
+        # Main text
+        name_surface = BUTTON_FONT.render(winner_name, True, PINK)
+        name_rect = name_surface.get_rect(center=(WIDTH // 2, y_offset))
+        WIN.blit(name_surface, name_rect)
+
+        # Draw crown images next to winner name
+        # Left crown
+        crown_left_x = name_rect.left - 60
+        crown_left_y = y_offset - 25  # Center vertically with text
+        WIN.blit(CROWN_IMAGE, (crown_left_x, crown_left_y))
+        
+        # Right crown
+        crown_right_x = name_rect.right + 10
+        crown_right_y = y_offset - 25  # Center vertically with text
+        WIN.blit(CROWN_IMAGE, (crown_right_x, crown_right_y))
+
+        y_offset += 70
+
+    # Final scores box
+    score_box_y = y_offset + 20
+    score_box_width = 600
+    score_box_height = 200
+    score_box = pygame.Rect(
+        WIDTH // 2 - score_box_width // 2,
+        score_box_y,
+        score_box_width,
+        score_box_height,
+    )
+
+    # Draw score box with shadow
+    draw_box_with_border(WIN, score_box, CURRENT_LINE, PINK, 4, shadow=True)
+
+    # Score title
+    score_title = TEXT_FONT.render("Final Scores", True, CYAN)
+    score_title_rect = score_title.get_rect(center=(WIDTH // 2, score_box_y + 30))
+    WIN.blit(score_title, score_title_rect)
+
+    # Display all player scores
+    score_y = score_box_y + 70
+    for player in player_list:
+        player_score_text = f"{player.name}: {player.winningTokenCount} tokens"
+        score_surface = SMALL_FONT.render(player_score_text, True, FOREGROUND)
+        score_rect = score_surface.get_rect(center=(WIDTH // 2, score_y))
+        WIN.blit(score_surface, score_rect)
+        score_y += 35
+
+    # Buttons
+    restart_button = Button(
+        WIDTH // 2 - 250, HEIGHT - 150, 200, 70, "PLAY AGAIN", GREEN
+    )
+    menu_button = Button(WIDTH // 2 + 50, HEIGHT - 150, 200, 70, "MAIN MENU", PURPLE)
+
+    restart_button.draw(WIN)
+    menu_button.draw(WIN)
+
+    pygame.display.update()
+
+    return restart_button, menu_button
 
 
 def draw_game_screen(game_instance, mouse_pos=(0, 0), viewing_discard_idx=None):
@@ -714,6 +841,7 @@ def main():
     # Game states
     STATE_MENU = 0
     STATE_GAME = 1
+    STATE_GAME_END = 2
 
     state = STATE_MENU
     selected_player_count = 0
@@ -759,6 +887,12 @@ def main():
                         print(f"Error creating game: {e}")
 
         elif state == STATE_GAME:
+            # Check if game ended
+            if game_instance and game_instance.gameState == "GAME_ENDED":
+                print(f"Game ended! Winners: {game_instance.winners}")
+                state = STATE_GAME_END
+                continue
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     run = False
@@ -828,6 +962,45 @@ def main():
                 card_rects, player_rects, number_buttons, discard_buttons = (
                     draw_game_screen(game_instance, mouse_pos, viewing_discard_idx)
                 )
+
+        elif state == STATE_GAME_END:
+            print(f"Entered STATE_GAME_END, game_instance exists: {game_instance is not None}")
+            if game_instance:
+                print(f"Drawing game end screen with winners: {game_instance.winners}")
+                try:
+                    restart_button, menu_button = draw_game_end_screen(
+                        game_instance.winners, game_instance.playerList
+                    )
+
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            run = False
+
+                        # Check restart button
+                        if restart_button.handle_event(event):
+                            print("Restart button clicked!")
+                            # Restart with same player count
+                            if game_instance:  # Type guard
+                                game_instance.resetTable()
+                                state = STATE_GAME
+
+                        # Check menu button
+                        if menu_button.handle_event(event):
+                            print("Menu button clicked!")
+                            state = STATE_MENU
+                            selected_player_count = 0
+                            game_instance = None
+                except Exception as e:
+                    print(f"Error in game end screen: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    # Fall back to menu
+                    state = STATE_MENU
+                    selected_player_count = 0
+                    game_instance = None
+            else:
+                print("Game instance is None in STATE_GAME_END!")
+                state = STATE_MENU
 
     pygame.quit()
     sys.exit()

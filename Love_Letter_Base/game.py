@@ -17,7 +17,7 @@ class GameInstance:
     selectedTargetIndex: int
     selectedGuess: int
     valid: int  # track number of valid targets
-    winners: list[Player]
+    winners: list[str]  # list of winner names
 
     # these are avaiable in extended edition
     # jesterPair: tuple
@@ -41,6 +41,8 @@ class GameInstance:
         self.selectedCardIndex = -1
         self.selectedTargetIndex = -1
         self.selectedGuess = -1
+        self.valid = 0
+        self.winners = []
 
     def __init__(self, nameList: list[str]):
         print("----------------------------------------")
@@ -200,33 +202,40 @@ class GameInstance:
         else:
             print(f"winning players are: {self.winners}")
             self.gameState = "GAME_ENDED"
-            # after game has ended, begins a new game
-            # just for testing the tokens counting function
-            self.resetTable()
+            # Don't auto-restart - let the UI handle it
 
     def isEndGame(self):
         self.winners = []
+        # Check if game should end
+        game_over = self.alivePlayerCount == 1 or self.remainingCount() < 2
+        
+        if not game_over:
+            return False
+        
+        # Determine winners
         # winner is the sole survivor
         if self.alivePlayerCount == 1:
             for player in self.playerList:
                 if not player.isKO:
                     self.winners = [player.name]
-        # calculate who has the highest score
-        # if multiple players have same score,
-        # there would be multiple winners
-        if self.remainingCount() < 2:
-            max = 0
+        # calculate who has the highest score (when deck runs out)
+        else:
+            max_val = 0
             for player in self.playerList:
-                if not player.isKO and player.hand[0].val > max:
-                    max = player.hand[0].val
-                    self.winners.append(player)
+                if not player.isKO and len(player.hand) > 0 and player.hand[0].val > max_val:
+                    max_val = player.hand[0].val
+            
+            # Find all players with the max value
             for player in self.playerList:
-                if not player.isKO and player.hand[0].val == max:
-                    self.winners.append(player)
+                if not player.isKO and len(player.hand) > 0 and player.hand[0].val == max_val:
+                    self.winners.append(player.name)
+        
+        # Award tokens to winners
         for player in self.playerList:
             if player.name in self.winners:
                 player.winningTokenCount += 1
-        return self.alivePlayerCount == 1 or len(self.cardPile.cardList) < 2
+        
+        return True
 
     # play a card with extra parameters, provide infomations
     # to execute card actions correctly
