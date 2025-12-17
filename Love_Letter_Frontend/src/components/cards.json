@@ -1,0 +1,121 @@
+[
+    {
+        "value": 0,
+        "img": "Assassin",
+        "name": "Assassin",
+        "max": 1,
+        "description": "This is a card whose effect only applies while it is in your hand. If another player chooses you when playing a Guard, then regardless of what number that player named (even 0!), when you reveal the Assassin (to all players), the Guard's player is eliminated from the round, while you are not. Of course, all other players will now know that you have the Assassin in your hand. It would be both improper and dangerous to keep consorting with such an unsavory character, so after you’ve resolved the Assassin's effect, you must discard him and draw a new card. If the deck is empty and you cannot draw a card, then draw the card that was removed at the start of the round."
+    },
+    {
+        "value": 0,
+        "img": "Jester",
+        "name": "Jester Darius",
+        "max": 1,
+        "description": "When you discard the Jester, choose another player—ideally, the one you believe is most likely to win the round. It's helpful to place the Jester token provided in the game near the player you chose, so everyone remembers your choice. If you're correct, and your chosen player does win the round, you gain a Token of Affection. If this would give you enough Tokens to win the game, then you win immediately and the game ends."
+    },
+    {
+        "value": 1,
+        "img": "Guard",
+        "name": "Guard Odette/Dougaul",
+        "max": "5/8",
+        "description": "When you discard the Jester, choose another player—ideally, the one you believe is most likely to win the round. It's helpful to place the Jester token provided in the game near the player you chose, so everyone remembers your choice. If you're correct, and your chosen player does win the round, you gain a Token of Affection. If this would give you enough Tokens to win the game, then you win immediately and the game ends."
+    },
+    {
+        "value": 2,
+        "img": "Priest",
+        "name": "Priest Tomas",
+        "max": 2,
+        "description": "When you discard the Priest, you can look at another player's hand. Do not reveal the hand to any other players."
+    },
+    {
+        "value": 2,
+        "img": "Cardinal",
+        "name": "Cardinal Vesper",
+        "max": 2,
+        "description": "When you discard the Cardinal, choose exactly 2 players (you may include yourself), who will switch hands. Then, once the hands are switched, you may look at one of them without revealing it to any other players. If less than 2 players still in the round can be chosen, (eg. due to Handmaid or Sycophant), this card is discarded without effect."
+    },
+    {
+        "value": 3,
+        "img": "Baron",
+        "name": "Baron Talus",
+        "max": 2,
+        "description": "When you discard the Baron, choose another player still in the round. You and that player secretly compare your hands. The player with the lower number is knocked out of the round. In case of a tie, nothing happens."
+    },
+    {
+        "value": 3,
+        "img": "Baroness",
+        "name": "Baroness Fiona",
+        "max": 2,
+        "description": "When you discard the Baroness, you can look at the hands of either 1 or 2 other players. Do not reveal them to any other players."
+    },
+    {
+        "value": 4,
+        "img": "Handmaid",
+        "name": "Handmaid Susannah",
+        "max": 2,
+        "description": "When you discard the Handmaid, you are immune to the effects of other players' cards until the start of your next turn. If all players other than the player whose turn it is are protected by the Handmaid, the player must choose him or herself for a card's effects, if possible."
+    },
+    {
+        "value": 4,
+        "img": "Sycophant",
+        "name": "Sycophant Morris",
+        "max": 2,
+        "description": "When you discard the Sycophant, choose a player (including yourself). Then, as long as the next card played has an effect that chooses one or more players, it has to at least choose the player you chose with the Sycophant."
+    },
+    {
+        "value": 5,
+        "img": "Prince",
+        "name": "Prince Arnaud",
+        "max": 2,
+        "description": "When you discard Prince Arnaud, choose one player still in the round (including yourself). That player discards his or her hand (but doesn't apply its effect, unless it is the Princess, see page 8) and draws a new one. If the deck is empty and the player cannot draw a card, that player draws the card that was removed at the start of the round. If all other players are protected by the Handmaid, you must choose yourself."
+    },
+    {
+        "value": 5,
+        "img": "Count",
+        "name": "Count Guntram",
+        "max": 2,
+        "description": "When the round ends, if it is necessary to check the number in the players' hands to determine a winner, the Count will increase that number by 1. Note that this stacks, so if you have both copies of the Count in your discard pile, the number will increase by 2. In this case, the cards with a number of 7—the Countess and the Dowager Queen—would beat the Princess. If increasing the number of the card in your hand with the Count would result in a tie for highest number in a player's hand, then resolve ties normally, by adding the numbers of the cards in the discard pile of each tied player and comparing the totals."
+    },
+    {
+        "value": 6,
+        "img": "King",
+        "name": "King Arnaud IV",
+        "max": 1,
+        "description": "When you discard King Arnaud IV, trade the card in your hand with the card held by another player of your choice. You cannot trade with a player who is out of the round."
+    },
+    {
+        "value": 6,
+        "img": "Constable",
+        "name": "Constable Viktor",
+        "max": 1,
+        "description": "The Constable is a somewhat unusual card, insofar as its effect applies not when discarded, like most cards, but when you are knocked out of the round with it in your discard pile. Should this happen, show the Constable, then claim a Token of Affection. If this would give you enough Tokens to win the game, then you win immediately and the game ends."
+    },
+    {
+        "value": 7,
+        "img": "Countess",
+        "name": "Countess Wilhelmina",
+        "max": 1,
+        "description": "If you have this card and the King or Prince is in your hand, you must discard this card."
+    },
+    {
+        "value": 7,
+        "img": "Dowager Queen",
+        "name": "Dowager Queen Tummia",
+        "max": 1,
+        "description": "When you discard the Dowager Queen, choose another player still in the round. You and that player secretly compare your hands. The player with the higher number is knocked out of the round. In case of a tie, nothing happens."
+    },
+    {
+        "value": 8,
+        "img": "Princess",
+        "name": "Princess Annette",
+        "max": 1,
+        "description": "If you discard the Princess—no matter how or why—she has tossed your letter into the fire. You are immediately knocked out of the round. If the Princess was discarded by a card effect, any remaining effects of that card do not apply (you do not draw a card from the Prince, for example). Effects tied to being knocked out the round still apply (eg. Constable, Jester), however."
+    },
+    {
+        "value": 9,
+        "img": "Bishop",
+        "name": "Bishop Vinizio",
+        "max": 1,
+        "description": "Discarding the Bishop allows you to name a number and a player. If the player has that number in their hand, you get a Token of Affection. If this would give you enough Tokens to win the game, then you win immediately and the game ends. If you gained a Token of Affection from this effect, then the player whose card you effectively revealed with the Bishop may discard their card (but doesn't apply its effects, unless it is the Princess, see page 8) and draw a new one. At the end of a round, despite his impressive 9, the Princess still beats the Bishop when comparing the values of cards in players' hands. He is considered to have a value of 9 for all other game effects, however."
+    }
+]
