@@ -219,13 +219,12 @@ def selectGuess(guessNum: int):
 
 # ------------- GAME UI ------------
 FPS = 60
-# WIDTH = 1800
-WIDTH = 800
+WIDTH = 1000
 HEIGHT = 1000
 
 pygame.init()
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Love Letter")
+pygame.display.set_caption("Love Letter - Multiplayer")
 
 # Colors
 BACKGROUND = (40, 42, 54)
@@ -243,19 +242,23 @@ WHITE = (248, 248, 242)
 BLACK = (40, 42, 54)
 GRAY = (68, 71, 90)
 DARK_GRAY = (98, 114, 164)
-LIGHT_BROWN = (68, 71, 90)
-DARK_BROWN = (40, 42, 54)
 BLUE = (189, 147, 249)
+# Additional colors
+CARD_BG = CURRENT_LINE
+CARD_BORDER = PINK
+GOLD = YELLOW
+LIME = GREEN
+SHADOW_BLACK = (0, 0, 0)  # Pure black for shadows
 
 # Fonts
-TITLE_FONT = pygame.font.Font(None, 72)
-BUTTON_FONT = pygame.font.Font(None, 48)
-TEXT_FONT = pygame.font.Font(None, 36)
-SMALL_FONT = pygame.font.Font(None, 24)
+TITLE_FONT = pygame.font.Font(None, 96)  # Larger, bolder title
+BUTTON_FONT = pygame.font.Font(None, 56)  # Larger buttons
+TEXT_FONT = pygame.font.Font(None, 42)  # Larger text
+SMALL_FONT = pygame.font.Font(None, 28)  # Larger small text
 
-# Card dimensions
-CARD_WIDTH = 100
-CARD_HEIGHT = 140
+# Card dimensions - slightly larger for better visibility
+CARD_WIDTH = 120
+CARD_HEIGHT = 168
 
 
 # Load card images
@@ -305,8 +308,42 @@ def load_card_images():
 
 CARD_IMAGES = load_card_images()
 
-# PERFORMANCE: Pre-create small card back for player boxes (avoid scaling every frame)
-SMALL_CARD_BACK = pygame.transform.scale(CARD_IMAGES["Back"], (80, 112))
+# Pre-create small card back for player boxes (avoid scaling every frame)
+SMALL_CARD_BACK = pygame.transform.scale(CARD_IMAGES["Back"], (96, 134))
+
+
+def draw_text_with_shadow(surface, text, font, color, x, y, shadow_offset=3):
+    """Draw text with a shadow for depth"""
+    # Draw shadow
+    shadow_text = font.render(text, True, SHADOW_BLACK)
+    surface.blit(shadow_text, (x + shadow_offset, y + shadow_offset))
+    # Draw main text
+    main_text = font.render(text, True, color)
+    surface.blit(main_text, (x, y))
+    return main_text.get_rect(topleft=(x, y))
+
+
+def draw_box_with_border(
+    surface, rect, bg_color, border_color, border_width=4, shadow=True
+):
+    """Draw a box with thick border and shadow for Balatro style"""
+    if shadow:
+        # Draw shadow
+        shadow_rect = rect.copy()
+        shadow_rect.x += 4
+        shadow_rect.y += 4
+        shadow_surf = pygame.Surface((shadow_rect.width, shadow_rect.height))
+        shadow_surf.set_alpha(120)
+        shadow_surf.fill(SHADOW_BLACK)
+        surface.blit(shadow_surf, shadow_rect)
+
+    # Draw background
+    pygame.draw.rect(surface, bg_color, rect, border_radius=8)
+
+    # Draw thick border (multiple layers)
+    for i in range(border_width):
+        border_rect = rect.inflate(-i * 2, -i * 2)
+        pygame.draw.rect(surface, border_color, border_rect, 1, border_radius=8)
 
 
 class Button:
@@ -317,9 +354,27 @@ class Button:
         self.hover = False
 
     def draw(self, surface):
-        color = CURRENT_LINE if self.hover else self.color
-        pygame.draw.rect(surface, color, self.rect)
-        pygame.draw.rect(surface, PINK, self.rect, 3)
+        color = self.color if not self.hover else YELLOW
+
+        # Draw shadow
+        shadow_rect = self.rect.copy()
+        shadow_rect.x += 4
+        shadow_rect.y += 4
+        pygame.draw.rect(surface, SHADOW_BLACK, shadow_rect, border_radius=10)
+
+        # Draw button background
+        pygame.draw.rect(surface, color, self.rect, border_radius=10)
+
+        # Draw thick pink border
+        for i in range(4):
+            border_rect = self.rect.inflate(-i * 2, -i * 2)
+            border_color = YELLOW if self.hover else PINK
+            pygame.draw.rect(surface, border_color, border_rect, 2, border_radius=10)
+
+        # Draw text with shadow
+        shadow_text = BUTTON_FONT.render(self.text, True, SHADOW_BLACK)
+        text_rect = shadow_text.get_rect(center=self.rect.center)
+        surface.blit(shadow_text, (text_rect.x + 3, text_rect.y + 3))
 
         text_surface = BUTTON_FONT.render(self.text, True, FOREGROUND)
         text_rect = text_surface.get_rect(center=self.rect.center)
@@ -337,17 +392,33 @@ class Button:
 def draw_player_selection_screen(selected_count):
     WIN.fill(BACKGROUND)
 
-    # Title
-    title = TITLE_FONT.render("Love Letter", True, PINK)
+    # Title with shadow
+    title_text = "Love Letter - Multiplayer"
+    # Draw multiple shadow layers for depth
+    for i in range(3, 0, -1):
+        shadow = TITLE_FONT.render(title_text, True, SHADOW_BLACK)
+        shadow_rect = shadow.get_rect(center=(WIDTH // 2 + i * 2, 100 + i * 2))
+        WIN.blit(shadow, shadow_rect)
+
+    # Draw title with pink
+    title = TITLE_FONT.render(title_text, True, PINK)
     title_rect = title.get_rect(center=(WIDTH // 2, 100))
     WIN.blit(title, title_rect)
 
-    # Subtitle
-    subtitle = TEXT_FONT.render("Current players in lobby:", True, FOREGROUND)
+    # Subtitle with shadow
+    subtitle = TEXT_FONT.render("Waiting for host to start game...", True, FOREGROUND)
     subtitle_rect = subtitle.get_rect(center=(WIDTH // 2, 200))
+    # Draw subtitle shadow
+    shadow_sub = TEXT_FONT.render("Waiting for host to start game...", True, SHADOW_BLACK)
+    WIN.blit(shadow_sub, (subtitle_rect.x + 2, subtitle_rect.y + 2))
     WIN.blit(subtitle, subtitle_rect)
 
-    # TODO: Players in lobby field
+    # Players info
+    players_text = TEXT_FONT.render(f"Players in lobby: {len(nameList)}", True, CYAN)
+    players_rect = players_text.get_rect(center=(WIDTH // 2, 300))
+    shadow_players = TEXT_FONT.render(f"Players in lobby: {len(nameList)}", True, SHADOW_BLACK)
+    WIN.blit(shadow_players, (players_rect.x + 2, players_rect.y + 2))
+    WIN.blit(players_text, players_rect)
 
     # Start button (only if a selection is made)
     start_button = Button(WIDTH // 2 - 100, 600, 200, 70, "START", GREEN)
@@ -368,28 +439,54 @@ def draw_game_screen(mouse_pos=(0, 0)):
 
     global remainingCount, handName, posInList, winningTokenCountList
 
-    # Title bar
-    title_bar = pygame.Rect(0, 0, WIDTH, 80)
+    # Title bar with shadow
+    title_bar = pygame.Rect(0, 0, WIDTH, 90)
+    # Draw shadow/depth
+    pygame.draw.rect(WIN, SHADOW_BLACK, pygame.Rect(0, 4, WIDTH, 90))
     pygame.draw.rect(WIN, CURRENT_LINE, title_bar, border_radius=0)
-    pygame.draw.rect(WIN, PINK, pygame.Rect(0, 0, WIDTH, 80), 2, border_radius=0)
-    title = TEXT_FONT.render("Love Letter", True, PINK)
+    # Draw thick pink bottom border
+    pygame.draw.rect(WIN, PINK, pygame.Rect(0, 86, WIDTH, 4))
+
+    # Title with shadow
+    title_shadow = TEXT_FONT.render("Love Letter - Multiplayer", True, SHADOW_BLACK)
+    WIN.blit(title_shadow, (23, 28))
+    title = TEXT_FONT.render("Love Letter - Multiplayer", True, PINK)
     WIN.blit(title, (20, 25))
 
-    # Game info
-    remaining_text = SMALL_FONT.render(
-        f"Cards in deck: {remainingCount}", True, FOREGROUND
-    )
-    WIN.blit(remaining_text, (WIDTH - 200, 30))
+    # Game info with shadow
+    remaining_text_str = f"Deck: {remainingCount}"
+    remaining_shadow = SMALL_FONT.render(remaining_text_str, True, SHADOW_BLACK)
+    WIN.blit(remaining_shadow, (WIDTH - 148, 33))
+    remaining_text = SMALL_FONT.render(remaining_text_str, True, CYAN)
+    WIN.blit(remaining_text, (WIDTH - 150, 30))
 
     # Draw deck (card back) in center of screen
     deck_x = WIDTH // 2 - CARD_WIDTH // 2
-    deck_y = HEIGHT // 2 - CARD_HEIGHT // 2  # Centered vertically
+    deck_y = HEIGHT // 2 - CARD_HEIGHT // 2
 
-    # Draw multiple card backs stacked to show deck
+    # Draw multiple card backs stacked to show deck with shadows
     if remainingCount > 0:
-        for i in range(min(3, remainingCount)):
-            offset = i * 3
+        for i in range(min(4, remainingCount)):
+            offset = i * 4
+            # Shadow for each card
+            shadow_rect = pygame.Rect(
+                deck_x + offset + 3, deck_y + offset + 3, CARD_WIDTH, CARD_HEIGHT
+            )
+            pygame.draw.rect(WIN, SHADOW_BLACK, shadow_rect, border_radius=8)
+            # Card
             WIN.blit(CARD_IMAGES["Back"], (deck_x + offset, deck_y + offset))
+            # Pink border for each card
+            card_rect = pygame.Rect(
+                deck_x + offset, deck_y + offset, CARD_WIDTH, CARD_HEIGHT
+            )
+            pygame.draw.rect(WIN, PINK, card_rect, 3, border_radius=8)
+
+        # Deck label with shadow
+        deck_label_shadow = SMALL_FONT.render("DECK", True, SHADOW_BLACK)
+        deck_label_rect = deck_label_shadow.get_rect(
+            center=(deck_x + CARD_WIDTH // 2 + 2, deck_y + CARD_HEIGHT + 22)
+        )
+        WIN.blit(deck_label_shadow, deck_label_rect)
 
         deck_label = SMALL_FONT.render("DECK", True, PURPLE)
         deck_label_rect = deck_label.get_rect(
@@ -415,7 +512,7 @@ def draw_game_screen(mouse_pos=(0, 0)):
         box_height = 180
         box_rect = pygame.Rect(x, y, box_width, box_height)
 
-        # NEW: Check if this player can be targeted
+        # Check if this player can be targeted
         is_valid_target = False
         if gameState == "WAITING_FOR_TARGET":
             is_valid_target = isValidTarget(i)
@@ -424,70 +521,113 @@ def draw_game_screen(mouse_pos=(0, 0)):
 
         # Check if hovering over this player
         is_hovering = box_rect.collidepoint(mouse_pos)
+        
         # Color based on state
         if playerStatus[i] == "KO":
             box_color = RED
+            border_color = DARK_GRAY
         elif i == currIndex:
             box_color = GREEN
+            border_color = YELLOW
         elif is_valid_target:
-            # Highlight valid targets with orange
             box_color = ORANGE
+            border_color = YELLOW
         else:
-            box_color = GRAY
+            box_color = PURPLE
+            border_color = PINK
 
-        pygame.draw.rect(WIN, box_color, box_rect, border_radius=8)
+        # Draw shadow
+        shadow_rect = box_rect.copy()
+        shadow_rect.x += 4
+        shadow_rect.y += 4
+        pygame.draw.rect(WIN, SHADOW_BLACK, shadow_rect, border_radius=10)
 
-        # Add hover effect
-        if is_hovering and is_valid_target:
-            pygame.draw.rect(WIN, YELLOW, box_rect, 4, border_radius=8)
-        else:
-            pygame.draw.rect(WIN, PINK, box_rect, 2, border_radius=8)
+        # Draw box background
+        pygame.draw.rect(WIN, box_color, box_rect, border_radius=10)
 
-        # Player name
+        # Draw thick border (animated on hover)
+        border_width = 5 if is_hovering and is_valid_target else 3
+        for j in range(border_width):
+            border_rect = box_rect.inflate(-j * 2, -j * 2)
+            pygame.draw.rect(WIN, border_color, border_rect, 2, border_radius=10)
+
+        # Player name with shadow
+        name_shadow = TEXT_FONT.render(nameList[i], True, SHADOW_BLACK)
+        name_rect = name_shadow.get_rect(center=(x + box_width // 2 + 2, y + 27))
+        WIN.blit(name_shadow, name_rect)
+
         name_surface = TEXT_FONT.render(nameList[i], True, FOREGROUND)
         name_rect = name_surface.get_rect(center=(x + box_width // 2, y + 25))
         WIN.blit(name_surface, name_rect)
 
-        # Status
+        # Status with appropriate color
         status = (
             "KNOCKED OUT"
             if playerStatus[i] == "KO"
             else "Protected" if playerStatus[i] == "Protected" else "Active"
         )
-        status_surface = SMALL_FONT.render(status, True, FOREGROUND)
+        status_color = RED if playerStatus[i] == "KO" else CYAN if playerStatus[i] == "Protected" else GREEN
+
+        status_shadow = SMALL_FONT.render(status, True, SHADOW_BLACK)
+        status_rect = status_shadow.get_rect(center=(x + box_width // 2 + 2, y + 57))
+        WIN.blit(status_shadow, status_rect)
+
+        status_surface = SMALL_FONT.render(status, True, status_color)
         status_rect = status_surface.get_rect(center=(x + box_width // 2, y + 55))
         WIN.blit(status_surface, status_rect)
 
-        # Tokens
-        tokens = SMALL_FONT.render(
-            f"Tokens: {winningTokenCountList[i]}", True, FOREGROUND
-        )
+        # Tokens with yellow color
+        tokens_str = f"Tokens: {winningTokenCountList[i]}"
+        tokens_shadow = SMALL_FONT.render(tokens_str, True, SHADOW_BLACK)
+        tokens_rect = tokens_shadow.get_rect(center=(x + box_width // 2 + 2, y + 87))
+        WIN.blit(tokens_shadow, tokens_rect)
+
+        tokens = SMALL_FONT.render(tokens_str, True, YELLOW)
         tokens_rect = tokens.get_rect(center=(x + box_width // 2, y + 85))
         WIN.blit(tokens, tokens_rect)
 
         # Show card back if player has cards (but not the current player)
         if playerStatus[i] != "KO" and i != posInList:
-            card_x = x + (box_width - 80) // 2
+            card_x = x + (box_width - 96) // 2
             card_y = y + 110
-            # PERFORMANCE: Use pre-scaled image instead of scaling every frame
+            # Draw shadow for card
+            shadow_rect = pygame.Rect(card_x + 3, card_y + 3, 96, 134)
+            pygame.draw.rect(WIN, SHADOW_BLACK, shadow_rect, border_radius=8)
+            # Use pre-scaled image instead of scaling every frame
             WIN.blit(SMALL_CARD_BACK, (card_x, card_y))
+            # Draw pink border on card
+            card_rect = pygame.Rect(card_x, card_y, 96, 134)
+            pygame.draw.rect(WIN, PINK, card_rect, 2, border_radius=8)
     player_rects.sort(key=lambda tup: tup[0])
 
     # Draw current player's hand at bottom center with actual card images
     if len(handName) > 0:
-        hand_y = HEIGHT - 250
+        hand_y = HEIGHT - 290
 
-        # Background for hand area - sized for 2 cards
-        hand_bg_width = 280
-        hand_bg_height = 150
+        # Background for hand area with shadow - sized for 2 larger cards
+        hand_bg_width = 320
+        hand_bg_height = 220
         hand_bg = pygame.Rect(
-            WIDTH // 2 - hand_bg_width // 2, hand_y - 20, hand_bg_width, hand_bg_height
+            WIDTH // 2 - hand_bg_width // 2, hand_y - 30, hand_bg_width, hand_bg_height
         )
-        pygame.draw.rect(WIN, CURRENT_LINE, hand_bg, border_radius=10)
-        pygame.draw.rect(WIN, PURPLE, hand_bg, 2, border_radius=10)
+        # Draw shadow
+        shadow_bg = hand_bg.copy()
+        shadow_bg.x += 4
+        shadow_bg.y += 4
+        pygame.draw.rect(WIN, SHADOW_BLACK, shadow_bg, border_radius=12)
 
+        # Draw background
+        pygame.draw.rect(WIN, CURRENT_LINE, hand_bg, border_radius=12)
+        # Draw thick pink border
+        for i in range(3):
+            border_rect = hand_bg.inflate(-i * 2, -i * 2)
+            pygame.draw.rect(WIN, PINK, border_rect, 2, border_radius=12)
+
+        # Hand label with shadow
+        hand_label_shadow = TEXT_FONT.render("Your Hand", True, SHADOW_BLACK)
+        WIN.blit(hand_label_shadow, (WIDTH // 2 - 78, hand_y - 22))
         hand_label = TEXT_FONT.render("Your Hand", True, PINK)
-        WIN.blit(hand_label, (WIDTH // 2 - 70, hand_y - 15))
+        WIN.blit(hand_label, (WIDTH // 2 - 80, hand_y - 25))
 
         # Draw cards with images
         total_cards = len(handName)
@@ -495,7 +635,7 @@ def draw_game_screen(mouse_pos=(0, 0)):
 
         for idx, cardName in enumerate(handName):
             card_x = start_x + idx * (CARD_WIDTH + 20)
-            card_y = hand_y + 20
+            card_y = hand_y + 10
 
             # Create a rect for this card and store it
             card_rect = pygame.Rect(card_x, card_y, CARD_WIDTH, CARD_HEIGHT)
@@ -508,20 +648,35 @@ def draw_game_screen(mouse_pos=(0, 0)):
             can_click = True
             can_click = gameState == "WAITING_FOR_CARD"
 
+            # Draw shadow
+            shadow_rect = pygame.Rect(card_x + 4, card_y + 4, CARD_WIDTH, CARD_HEIGHT)
+            pygame.draw.rect(WIN, SHADOW_BLACK, shadow_rect, border_radius=10)
+
+            # Draw glow effect if hovering and clickable
             if is_hovering and can_click:
-                # Draw a glow effect
-                highlight_rect = card_rect.inflate(10, 10)  # Slightly bigger
-                pygame.draw.rect(WIN, YELLOW, highlight_rect, 3, border_radius=10)
+                for i in range(3):
+                    glow_rect = card_rect.inflate(8 - i * 2, 8 - i * 2)
+                    glow_color = YELLOW if i % 2 == 0 else PINK
+                    pygame.draw.rect(WIN, glow_color, glow_rect, 2, border_radius=12)
 
             # Draw card image
             WIN.blit(CARD_IMAGES[cardName], (card_x, card_y))
 
-            # Draw card border with rounded corners
-            border_color = PINK
-            pygame.draw.rect(WIN, border_color, card_rect, 2, border_radius=8)
+            # Draw thick pink border
+            border_color = YELLOW if is_hovering and can_click else PINK
+            for i in range(3):
+                border_rect = card_rect.inflate(-i * 2, -i * 2)
+                pygame.draw.rect(WIN, border_color, border_rect, 2, border_radius=10)
 
-            # Draw card name below
-            card_name = SMALL_FONT.render(f"{cardName}", True, CYAN)
+            # Draw card name below with shadow
+            card_name_str = f"{cardName}"
+            card_name_shadow = SMALL_FONT.render(card_name_str, True, SHADOW_BLACK)
+            card_name_rect = card_name_shadow.get_rect(
+                center=(card_x + CARD_WIDTH // 2 + 2, card_y + CARD_HEIGHT + 17)
+            )
+            WIN.blit(card_name_shadow, card_name_rect)
+
+            card_name = SMALL_FONT.render(card_name_str, True, CYAN)
             card_name_rect = card_name.get_rect(
                 center=(card_x + CARD_WIDTH // 2, card_y + CARD_HEIGHT + 15)
             )
@@ -529,12 +684,12 @@ def draw_game_screen(mouse_pos=(0, 0)):
 
     # Draw number buttons if waiting for guess
     if gameState == "WAITING_FOR_GUESS":
-        button_width = 60
-        button_height = 60
-        button_spacing = 10
+        button_width = 70
+        button_height = 70
+        button_spacing = 15
         total_width = 7 * button_width + 6 * button_spacing
         start_x = WIDTH // 2 - total_width // 2
-        button_y = HEIGHT // 2
+        button_y = HEIGHT // 2 - 20
 
         for num in range(2, 9):  # 2 through 8
             button_x = start_x + (num - 2) * (button_width + button_spacing)
@@ -543,12 +698,29 @@ def draw_game_screen(mouse_pos=(0, 0)):
             # Check if hovering
             is_hovering = button_rect.collidepoint(mouse_pos)
 
-            # Draw button
-            button_color = CYAN if is_hovering else PURPLE
-            pygame.draw.rect(WIN, button_color, button_rect, border_radius=8)
-            pygame.draw.rect(WIN, PINK, button_rect, 2, border_radius=8)
+            # Draw shadow
+            shadow_rect = button_rect.copy()
+            shadow_rect.x += 3
+            shadow_rect.y += 3
+            pygame.draw.rect(WIN, SHADOW_BLACK, shadow_rect, border_radius=10)
 
-            # Draw number
+            # Draw button background
+            button_color = YELLOW if is_hovering else PURPLE
+            pygame.draw.rect(WIN, button_color, button_rect, border_radius=10)
+
+            # Draw thick border
+            border_color = YELLOW if is_hovering else PINK
+            for i in range(3):
+                border_r = button_rect.inflate(-i * 2, -i * 2)
+                pygame.draw.rect(WIN, border_color, border_r, 2, border_radius=10)
+
+            # Draw number with shadow
+            num_shadow = TEXT_FONT.render(str(num), True, SHADOW_BLACK)
+            num_rect = num_shadow.get_rect(
+                center=(button_rect.centerx + 2, button_rect.centery + 2)
+            )
+            WIN.blit(num_shadow, num_rect)
+
             num_text = TEXT_FONT.render(str(num), True, FOREGROUND)
             num_rect = num_text.get_rect(center=button_rect.center)
             WIN.blit(num_text, num_rect)
@@ -556,19 +728,30 @@ def draw_game_screen(mouse_pos=(0, 0)):
             # Store for click detection
             number_buttons.append((num, button_rect))
 
+    # Draw prompts with emphasis
     if gameState == "WAITING_FOR_CARD":
-        prompt = TEXT_FONT.render("Select a card to play", True, YELLOW)
+        prompt_text = "Select a card to play"
+        prompt_color = GREEN
     elif gameState == "WAITING_FOR_TARGET":
-        prompt = TEXT_FONT.render("Select a target player", True, YELLOW)
+        prompt_text = "Select a target player"
+        prompt_color = ORANGE
     elif gameState == "WAITING_FOR_GUESS":
-        prompt = TEXT_FONT.render("Guess opponent's card (2-8)", True, YELLOW)
+        prompt_text = "Guess opponent's card (2-8)"
+        prompt_color = CYAN
     else:
-        prompt = TEXT_FONT.render("Please wait for you turn", True, YELLOW)
+        prompt_text = "Waiting for your turn..."
+        prompt_color = FOREGROUND
 
-    prompt_rect = prompt.get_rect(center=(WIDTH // 2, HEIGHT - 40))
-    WIN.blit(prompt, prompt_rect)
+    if prompt_text:
+        # Draw prompt with shadow and border
+        prompt_shadow = TEXT_FONT.render(prompt_text, True, SHADOW_BLACK)
+        prompt_rect = prompt_shadow.get_rect(center=(WIDTH // 2 + 3, HEIGHT - 33))
+        WIN.blit(prompt_shadow, prompt_rect)
 
-    # Instructions
+        prompt = TEXT_FONT.render(prompt_text, True, prompt_color)
+        prompt_rect = prompt.get_rect(center=(WIDTH // 2, HEIGHT - 35))
+        WIN.blit(prompt, prompt_rect)
+
     instruction = SMALL_FONT.render("Press ESC to return to menu", True, COMMENT)
     WIN.blit(instruction, (20, HEIGHT - 30))
 
