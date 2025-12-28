@@ -409,14 +409,18 @@ def draw_player_selection_screen(selected_count):
     subtitle = TEXT_FONT.render("Waiting for host to start game...", True, FOREGROUND)
     subtitle_rect = subtitle.get_rect(center=(WIDTH // 2, 200))
     # Draw subtitle shadow
-    shadow_sub = TEXT_FONT.render("Waiting for host to start game...", True, SHADOW_BLACK)
+    shadow_sub = TEXT_FONT.render(
+        "Waiting for host to start game...", True, SHADOW_BLACK
+    )
     WIN.blit(shadow_sub, (subtitle_rect.x + 2, subtitle_rect.y + 2))
     WIN.blit(subtitle, subtitle_rect)
 
     # Players info
     players_text = TEXT_FONT.render(f"Players in lobby: {len(nameList)}", True, CYAN)
     players_rect = players_text.get_rect(center=(WIDTH // 2, 300))
-    shadow_players = TEXT_FONT.render(f"Players in lobby: {len(nameList)}", True, SHADOW_BLACK)
+    shadow_players = TEXT_FONT.render(
+        f"Players in lobby: {len(nameList)}", True, SHADOW_BLACK
+    )
     WIN.blit(shadow_players, (players_rect.x + 2, players_rect.y + 2))
     WIN.blit(players_text, players_rect)
 
@@ -521,7 +525,7 @@ def draw_game_screen(mouse_pos=(0, 0)):
 
         # Check if hovering over this player
         is_hovering = box_rect.collidepoint(mouse_pos)
-        
+
         # Color based on state
         if playerStatus[i] == "KO":
             box_color = RED
@@ -566,7 +570,11 @@ def draw_game_screen(mouse_pos=(0, 0)):
             if playerStatus[i] == "KO"
             else "Protected" if playerStatus[i] == "Protected" else "Active"
         )
-        status_color = RED if playerStatus[i] == "KO" else CYAN if playerStatus[i] == "Protected" else GREEN
+        status_color = (
+            RED
+            if playerStatus[i] == "KO"
+            else CYAN if playerStatus[i] == "Protected" else GREEN
+        )
 
         status_shadow = SMALL_FONT.render(status, True, SHADOW_BLACK)
         status_rect = status_shadow.get_rect(center=(x + box_width // 2 + 2, y + 57))
