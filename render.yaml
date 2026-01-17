@@ -1,8 +1,8 @@
 databases:
-  - name: LoveLetterBackendDb
+  - name: Love_Letter_Backend_Db
     plan: free
-    databaseName: Love_Letter_Backend
-    user: Love_Letter_Backend
+    databaseName: LoveLetterBackend
+    user: LoveLetterBackend
 
 services:
   - type: web
@@ -14,7 +14,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: LoveLetterBackendDb
+          name: Love_Letter_Backend_Db
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
