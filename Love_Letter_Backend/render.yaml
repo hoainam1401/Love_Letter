@@ -1,0 +1,22 @@
+databases:
+  - name: Love_Letter_Backend_db
+    plan: free
+    databaseName: Love_Letter_Backend
+    user: Love_Letter_Backend
+
+services:
+  - type: web
+    plan: free
+    name: Love_Letter_Backend
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "python -m gunicorn Love_Letter_Backend.asgi:application -k uvicorn.workers.UvicornWorker"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: Love_Letter_Backend_db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4
