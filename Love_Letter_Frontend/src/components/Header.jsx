@@ -14,6 +14,12 @@ export default function Header() {
             case "How to play":
                 method = "tutorial"
                 break
+            case "About us":
+                method = "about"
+                break
+            case "Play":
+                method = "Play"
+                break
             case "Register":
                 method = "register"
                 break
@@ -21,9 +27,10 @@ export default function Header() {
                 method = "login"
                 break
             default:
+                method = ""
                 break
         }
-        navigate(`/${method}/`)
+        navigate(`/${method}`)
     }
     return (
         <header>
@@ -31,6 +38,8 @@ export default function Header() {
                 <button onClick={handleSubmit} ><img src={logo} className="home-logo"></img></button>
                 <button onClick={handleSubmit}>Leaderboard</button>
                 <button onClick={handleSubmit}>How to play</button>
+                <button onClick={handleSubmit}>About us</button>
+                <button onClick={handleSubmit}>Play</button>
             </div>
             <div className="log-block">
                 <button onClick={handleSubmit}>Register</button>

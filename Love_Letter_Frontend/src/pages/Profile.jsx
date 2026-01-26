@@ -1,4 +1,5 @@
 export default function Profile() {
+    // extract 
     return (<main>
         <h1>Name</h1>
         <p>Unique ID: </p>
