@@ -1,6 +1,4 @@
-<html lang="en-us">
-<script src="https://pygame-web.github.io/archives/0.9/pythons.js" type=module id=site data-LINES=57 data-CONSOLE=25
-    data-python=python3.12 data-os=vtx,fs,snd,gui async defer>#<!--
+<html lang="en-us"><script src="https://pygame-web.github.io/archives/0.9/pythons.js" type=module id=site data-LINES=57 data-CONSOLE=25 data-python=python3.12 data-os=vtx,fs,snd,gui async defer>#<!--
 
 print("""
 Loading love_letter_base_offline from love_letter_base_offline.apk
@@ -213,9 +211,7 @@ asyncio.run( custom_site() )
 #
 # do not alter that comment block it is separating python code from html code
 # =============================================================================
-# --></script>
-
-<head><!--
+# --></script><head><!--
 //=============================================================================
 //
 //
@@ -229,29 +225,28 @@ asyncio.run( custom_site() )
 {{cookiecutter.comment}}
     {% endif %}
 
--->
-    <script type="application/javascript">
-        // END BLOCK
+--><script type="application/javascript">
+// END BLOCK
 
 
 
-        // this dict is available under PyConfig.config from __main__
+// this dict is available under PyConfig.config from __main__
 
-        config = {
-            xtermjs: "1",
-            _sdl2: "canvas",
-            user_canvas: 0,
-            user_canvas_managed: 0,
-            ume_block: 1,
-            can_close: 0,
-            archive: "love_letter_base_offline",
-            gui_debug: 3,
-            cdn: "https://pygame-web.github.io/archives/0.9/",
-            autorun: 0,
-            PYBUILD: "3.12"
-        }
+config = {
+    xtermjs : "1" ,
+    _sdl2 : "canvas",
+    user_canvas : 0,
+    user_canvas_managed : 0,
+    ume_block : 1,
+    can_close : 0,
+    archive : "love_letter_base_offline",
+    gui_debug : 3,
+    cdn : "https://pygame-web.github.io/archives/0.9/",
+    autorun : 0,
+    PYBUILD : "3.12"
+}
 
-    </script>
+</script>
 
     <title>love_letter_base_offline</title>
     <meta charset="UTF-8">
@@ -259,7 +254,7 @@ asyncio.run( custom_site() )
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="viewport" content="height=device-height, initial-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
 
     <link rel="prefetch" href="https://pygame-web.github.io/archives/0.9/pythonrc.py">
     <link rel="prefetch" href="https://pygame-web.github.io/archives/0.9/vt/xterm.js">
@@ -284,17 +279,9 @@ asyncio.run( custom_site() )
             width: 300px;
         }
 
-        div.emscripten {
-            text-align: center;
-        }
-
-        div.emscripten_border {
-            border: 1px solid black;
-        }
-
-        div.thick_border {
-            border: 4px solid black;
-        }
+        div.emscripten { text-align: center; }
+        div.emscripten_border { border: 1px solid black; }
+        div.thick_border { border: 4px solid black; }
 
         /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
         /* average size of droid screen 470dp x 320dp  */
@@ -319,17 +306,17 @@ asyncio.run( custom_site() )
             font-family: arial;
             margin: 0;
             padding: none;
-            background-color: powderblue;
+            background-color:powderblue;
         }
 
-        .topright {
-            position: absolute;
-            top: 0px;
-            right: 0px;
+        .topright{
+           position:absolute;
+           top:0px;
+           right:0px;
         }
 
         .bottomright {
-            position: absolute;
+            position:absolute;
             top: 40%;
             right: 0px;
         }
@@ -340,17 +327,17 @@ asyncio.run( custom_site() )
             justify-content: center;
         }
 
-        .trinfo {
-            position: relative;
-            right: 0px;
-            border: 1px solid black;
+        .trinfo{
+           position:relative;
+           right:0px;
+           border: 1px solid black;
         }
 
-        .framed {
-            position: relative;
-            top: 150px;
-            right: 10px;
-            border: 1px solid black;
+        .framed{
+           position:relative;
+           top:150px;
+           right:10px;
+           border: 1px solid black;
         }
     </style>
 
@@ -361,7 +348,7 @@ asyncio.run( custom_site() )
 <body>
 
     <div id="transfer" align=center>
-        <!--        <div class="spinner" id='spinner'></div> -->
+<!--        <div class="spinner" id='spinner'></div> -->
         <div class="emscripten" id="status">Downloading...</div>
         <div class="emscripten">
             <progress value="0" max="100" id="progress"></progress>
@@ -369,12 +356,15 @@ asyncio.run( custom_site() )
     </div>
 
 
-    <canvas class="emscripten" id="canvas" width="1px" height="1px" oncontextmenu="event.preventDefault()" tabindex=1>
+    <canvas class="emscripten" id="canvas"
+width="1px"
+height="1px"
+    oncontextmenu="event.preventDefault()" tabindex=1>
     </canvas>
 
     <div id=html></div>
 
-    <div id=crt class=bottomright>
+    <div id=crt  class=bottomright >
 
         <div id="system" hidden>
             <div class="button-container">
@@ -388,7 +378,7 @@ asyncio.run( custom_site() )
                 <div id=load_min>min</div>
                 <div id=load_avg>avg</div>
                 <div id=load_max>max</div>
-                <button id="load_rst" disabled>RESET</button>
+              <button id="load_rst" disabled>RESET</button>
             </div>
 
             <div id="level">(battery level unknown)</div>
@@ -400,12 +390,20 @@ asyncio.run( custom_site() )
 
             <div id="info" class="trinfo"></div>
 
-            <iframe id="iframe" class="framed" name="iframe" width="470px" height="90%" allowtransparency="true"
-                style="z-index: 10;" style="background: #FFFFFF;" frameborder="1" allowfullscreen="true"
-                webkitallowfullscreen="true" msallowfullscreen="true" mozallowfullscreen="true"
+            <iframe id="iframe" class="framed" name="iframe"
+width="470px" height="90%"
+allowtransparency="true"
+style="z-index: 10;"
+style="background: #FFFFFF;"
+frameborder="1"
+                allowfullscreen="true"
+                webkitallowfullscreen="true"
+                msallowfullscreen="true"
+                mozallowfullscreen="true"
                 sandbox="allow-same-origin allow-top-navigation allow-scripts allow-pointer-lock"
                 allow="autoplay; fullscreen *; geolocation; microphone; camera; midi; monetization; xr-spatial-tracking; gamepad; gyroscope; accelerometer; xr; cross-origin-isolated"
-                src="https://pygame-web.github.io/archives/0.9/empty.html" scrolling="yes">
+                src="https://pygame-web.github.io/archives/0.9/empty.html"
+                scrolling="yes">
             </iframe>
         </div>
 
@@ -423,70 +421,69 @@ asyncio.run( custom_site() )
 
     <script type="application/javascript">
 
-        async function custom_onload(debug_hidden) {
-            // this is called before anything python is loaded
-            // make your js customization here
-            console.log(__FILE__, "custom_onload")
+    async function custom_onload(debug_hidden) {
+        // this is called before anything python is loaded
+        // make your js customization here
+        console.log(__FILE__, "custom_onload")
 
-            pyconsole.hidden = debug_hidden
-            system.hidden = debug_hidden
-            transfer.hidden = debug_hidden
-            info.hidden = debug_hidden
-            box.hidden = debug_hidden
+        pyconsole.hidden = debug_hidden
+        system.hidden = debug_hidden
+        transfer.hidden = debug_hidden
+        info.hidden = debug_hidden
+        box.hidden =  debug_hidden
 
-        }
+    }
 
-        function custom_prerun() {
-            // no python main and no (MEMFS + VFS) yet.
-            console.log(__FILE__, "custom_prerun")
+    function custom_prerun(){
+        // no python main and no (MEMFS + VFS) yet.
+        console.log(__FILE__, "custom_prerun")
 
-        }
+    }
 
-        function custom_postrun() {
-            // python main and no VFS filesystem yet.
-            console.log(__FILE__, "custom_postrun")
+    function custom_postrun(){
+        // python main and no VFS filesystem yet.
+        console.log(__FILE__, "custom_postrun")
 
-            // prevent ff horizontal scroll
-            window.addEventListener("keydown", function (e) {
-                if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(e.code) > -1) {
-                    if (!python.config.debug)
-                        e.preventDefault();
-                }
-            }, false);
+        // prevent ff horizontal scroll
+        window.addEventListener("keydown", function(e) {
+            if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
+                if (!python.config.debug)
+                    e.preventDefault();
+            }
+        }, false);
 
-        }
+    }
 
-        function debug() {
-            // allow to gain access to dev tools from js console
-            // but only on desktop. difficult to reach when in iframe
-            python.config.debug = true
-            custom_onload(false)
-            Module.PyRun_SimpleString("shell.uptime()")
-            window_resize()
-        }
+    function debug() {
+        // allow to gain access to dev tools from js console
+        // but only on desktop. difficult to reach when in iframe
+        python.config.debug = true
+        custom_onload(false)
+        Module.PyRun_SimpleString("shell.uptime()")
+        window_resize()
+    }
 
-        function info_inline(data) {
-            document.getElementById("info").innerHTML = data
-        }
+    function info_inline(data){
+        document.getElementById("info").innerHTML = data
+    }
 
-        function info_online(url) {
-            // display info about current APK
-            fetch(url /*, options */)
-                .then((response) => response.text())
-                .then((html) => {
-                    info_inline(html);
-                })
-                .catch((error) => {
-                    console.warn(error);
-                });
-        }
+    function info_online(url) {
+        // display info about current APK
+        fetch( url /*, options */)
+            .then((response) => response.text())
+            .then((html) => {
+                info_inline(html);
+        })
+        .catch((error) => {
+            console.warn(error);
+        });
+    }
 
-        function frame_online(url) {
-            window.frames["iframe"].location = url;
-        }
+    function frame_online(url) {
+        window.frames["iframe"].location = url;
+    }
 
     </script>
 
 </body>
-
 </html>

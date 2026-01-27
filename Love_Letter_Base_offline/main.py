@@ -4,6 +4,7 @@ import os
 import random
 import asyncio
 from game import GameInstance
+import js
 
 FPS = 60
 WIDTH = 1000
@@ -879,9 +880,10 @@ async def main():
 
                 # Check start button
                 if start_button and start_button.handle_event(event):
+                    username = js.getLocal("username")
                     # Create game with player names
                     player_names = [
-                        f"Player {i+1}" for i in range(selected_player_count)
+                        f"Player {username} {i+1}" for i in range(selected_player_count)
                     ]
                     try:
                         game_instance = GameInstance(player_names)
