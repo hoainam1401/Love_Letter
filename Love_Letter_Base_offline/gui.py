@@ -38,7 +38,7 @@ GAME_SHADOW = (0, 0, 0)
 
 CARD_WIDTH = 120
 CARD_HEIGHT = 168
-GAME_LOG_RECT = pygame.Rect(WIDTH // 2 - 245, 100, 490, 88)
+GAME_LOG_RECT = pygame.Rect(20, HEIGHT - 300, 260, 260)
 END_GAME_LOG_RECT = pygame.Rect(500, 385, 420, 310)
 PLAYER_POSITIONS = [
     (WIDTH // 2 - 100, 650),
@@ -158,7 +158,7 @@ class GameLog:
         pygame.draw.rect(WIN, GAME_PANEL, self.rect, border_radius=10)
         pygame.draw.rect(WIN, GAME_CYAN, self.rect, 2, border_radius=10)
 
-        title = TINY_FONT.render("GAME LOG - MOUSE WHEEL", True, GAME_CYAN)
+        title = TINY_FONT.render("GAME LOG", True, GAME_CYAN)
         WIN.blit(title, (self.rect.x + 12, self.rect.y + 8))
 
         lines = self._lines(notifications)
@@ -197,7 +197,7 @@ class GameEffects:
     DURATION_MULTIPLIERS = {
         "Guard": 1.25,
         "Priest": 1.8,
-        "Baron": 1.35,
+        "Baron": 1.8,
         "Prince": 1.85,
         "King": 1.8,
         "Princess": 1.4,
@@ -358,7 +358,7 @@ class GameEffects:
             (destination[0], destination[1] - 176),
         )
 
-    def _drawPriest(self, progress, destination):
+    def _drawHandReveal(self, progress, destination):
         revealCard = self.active.get("revealCard")
         if revealCard is None or progress < 0.38:
             return
@@ -379,6 +379,95 @@ class GameEffects:
                 GAME_CYAN,
                 (destination[0], destination[1] - 112),
             )
+
+    def _drawBaron(self, progress):
+        if not self.active.get("showComparison") or progress < 0.32:
+            return
+        actorValue = self.active.get("actorValue")
+        targetValue = self.active.get("targetValue")
+        if actorValue is None or targetValue is None:
+            return
+
+        reveal = min(1.0, (progress - 0.32) / 0.22)
+        alpha = int(245 * reveal)
+        panel = pygame.Surface((540, 300), pygame.SRCALPHA)
+        pygame.draw.rect(
+            panel,
+            (*GAME_BACKGROUND, alpha),
+            panel.get_rect(),
+            border_radius=18,
+        )
+        pygame.draw.rect(
+            panel,
+            (*GAME_CYAN, alpha),
+            panel.get_rect(),
+            4,
+            border_radius=18,
+        )
+        WIN.blit(panel, panel.get_rect(center=(WIDTH // 2, HEIGHT // 2)))
+
+        cardScale = 0.55 + 0.15 * reveal
+        self._drawCard(
+            self.active.get("heldCard") or "Back",
+            (WIDTH // 2 - 175, HEIGHT // 2),
+            cardScale,
+            alpha,
+            -5 * (1 - reveal),
+        )
+        self._drawCard(
+            self.active.get("targetCard") or "Back",
+            (WIDTH // 2 + 175, HEIGHT // 2),
+            cardScale,
+            alpha,
+            5 * (1 - reveal),
+        )
+        _center_text(
+            "HAND COMPARISON",
+            SMALL_FONT,
+            GAME_CYAN,
+            (WIDTH // 2, HEIGHT // 2 - 118),
+        )
+
+        if progress < 0.5:
+            return
+        if actorValue < targetValue:
+            operator = "<"
+        elif actorValue > targetValue:
+            operator = ">"
+        else:
+            operator = "="
+        humanValue = (
+            actorValue if self.active["actorIndex"] == 0 else targetValue
+        )
+        opponentValue = (
+            targetValue if self.active["actorIndex"] == 0 else actorValue
+        )
+        if humanValue > opponentValue:
+            operatorColor = GAME_GREEN
+        elif humanValue < opponentValue:
+            operatorColor = GAME_RED
+        else:
+            operatorColor = GAME_YELLOW
+        expression = HEADING_FONT.render(
+            f"{actorValue} {operator} {targetValue}", True, operatorColor
+        )
+        expression.set_alpha(min(255, int((progress - 0.5) / 0.14 * 255)))
+        WIN.blit(expression, expression.get_rect(center=(WIDTH // 2, HEIGHT // 2)))
+
+        actorLabel = "YOUR HAND" if self.active["actorIndex"] == 0 else "OPPONENT"
+        targetLabel = "YOUR HAND" if self.active.get("targetIndex") == 0 else "OPPONENT"
+        _center_text(
+            actorLabel,
+            TINY_FONT,
+            GAME_TEXT,
+            (WIDTH // 2 - 175, HEIGHT // 2 + 112),
+        )
+        _center_text(
+            targetLabel,
+            TINY_FONT,
+            GAME_TEXT,
+            (WIDTH // 2 + 175, HEIGHT // 2 + 112),
+        )
 
     def _drawPrince(self, progress, destination):
         discardedCard = self.active.get("discardedCard")
@@ -469,7 +558,9 @@ class GameEffects:
         if cardName == "Guard":
             self._drawGuard(progress, destination)
         elif cardName == "Priest":
-            self._drawPriest(progress, destination)
+            self._drawHandReveal(progress, destination)
+        elif cardName == "Baron":
+            self._drawBaron(progress)
         elif cardName == "Prince":
             self._drawPrince(progress, destination)
         elif cardName == "King" and targetIndex is not None:
@@ -1037,6 +1128,8 @@ class GameEndScreen:
             )
 
             hand = view.finalHands[index][0] if view.finalHands[index] else None
+            if hand is None and view.discardPiles[index]:
+                hand = view.discardPiles[index][-1][0]
             playerRevealAt = revealStart + index * revealInterval
             revealProgress = max(
                 0.0,

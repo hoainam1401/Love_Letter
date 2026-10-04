@@ -3,6 +3,7 @@ import asyncio
 import pygame
 
 from ai import AiController
+from card import CARD_VALUES
 from game import GameInstance
 from gui import (
     FPS,
@@ -22,7 +23,7 @@ SCREEN_PLAYER_SELECT = "PLAYER_SELECT"
 SCREEN_GAME = "GAME"
 SCREEN_GAME_END = "GAME_END"
 HUMAN_INDEX = 0
-AI_SPEEDS = {"SLOW": 1700, "NORMAL": 900, "FAST": 350}
+AI_SPEEDS = {"SLOW": 3000, "NORMAL": 2000, "FAST": 1000}
 
 
 class LocalRoomGame:
@@ -289,6 +290,17 @@ class LocalRoomGame:
         newlyKnockedOut = [
             self.game.playerList[index].name for index in newlyKnockedOutIndexes
         ]
+        showSwapFaces = (
+            cardName == "King"
+            and targetIndex is not None
+            and HUMAN_INDEX in (actorIndex, targetIndex)
+        )
+        showComparison = (
+            cardName == "Baron"
+            and targetIndex is not None
+            and HUMAN_INDEX in (actorIndex, targetIndex)
+        )
+        showPrivateCards = showSwapFaces or showComparison
         self.visualEvents.append(
             {
                 "cardName": cardName,
@@ -315,12 +327,27 @@ class LocalRoomGame:
                     if cardName == "Prince" and target is not None and target.hand
                     else None
                 ),
-                "heldCard": action["heldCard"],
-                "targetCard": action["targetCard"],
-                "showSwapFaces": (
-                    cardName == "King"
-                    and targetIndex is not None
-                    and HUMAN_INDEX in (actorIndex, targetIndex)
+                "heldCard": (
+                    action["heldCard"]
+                    if cardName not in ("King", "Baron") or showPrivateCards
+                    else None
+                ),
+                "targetCard": (
+                    action["targetCard"]
+                    if cardName not in ("King", "Baron") or showPrivateCards
+                    else None
+                ),
+                "showSwapFaces": showSwapFaces,
+                "showComparison": showComparison,
+                "actorValue": (
+                    CARD_VALUES[action["heldCard"]]
+                    if showComparison and action["heldCard"] is not None
+                    else None
+                ),
+                "targetValue": (
+                    CARD_VALUES[action["targetCard"]]
+                    if showComparison and action["targetCard"] is not None
+                    else None
                 ),
             }
         )
@@ -336,6 +363,8 @@ class LocalRoomGame:
                 text += f" {target.name} holds {target.hand[0].name}."
         elif cardName == "Baron" and target is not None:
             text = f"{actorName} compared hands with {target.name}."
+            if actorIndex == HUMAN_INDEX and action["targetCard"]:
+                text += f" {target.name} holds {action['targetCard']}."
             if newlyKnockedOut:
                 text += f" {', '.join(newlyKnockedOut)} was knocked out."
             else:

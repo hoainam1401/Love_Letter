@@ -95,6 +95,45 @@ class GameRulesTest(unittest.TestCase):
         self.assertEqual(game.lastForcedDiscard, "Princess")
         self.assertTrue(game.playerList[1].isKO)
 
+    def testKingSwapIsKnownOnlyToHumanTargetAndAiParticipant(self):
+        game = self.makeGame(("Human", "Target AI", "Other AI"))
+        self.setTurn(
+            game,
+            0,
+            (("King", "Guard"), ("Princess",), ("Priest",)),
+        )
+        ai = AiController(3)
+        ai.knownCards[1][0] = "Countess"
+        ai.knownCards[2][0] = "Countess"
+        ai.knownCards[2][1] = "Princess"
+
+        game.swap(game.playerList[0], game.playerList[1])
+        ai.observeResolvedAction(game, 0, "King", 1)
+
+        self.assertEqual(ai.knownCards[1].get(0), "Princess")
+        self.assertNotIn(0, ai.knownCards[2])
+        self.assertNotIn(1, ai.knownCards[2])
+
+    def testKingSwapBetweenAisStaysKnownOnlyToParticipants(self):
+        game = self.makeGame(("Human", "First AI", "Second AI", "Other AI"))
+        self.setTurn(
+            game,
+            1,
+            (("Guard",), ("King", "Priest"), ("Princess",), ("Baron",)),
+        )
+        ai = AiController(4)
+        ai.knownCards[3][1] = "Priest"
+        ai.knownCards[3][2] = "Princess"
+
+        game.playerList[1].discard(game.playerList[1].hand[0])
+        game.swap(game.playerList[1], game.playerList[2])
+        ai.observeResolvedAction(game, 1, "King", 2)
+
+        self.assertEqual(ai.knownCards[1].get(2), "Priest")
+        self.assertEqual(ai.knownCards[2].get(1), "Princess")
+        self.assertNotIn(1, ai.knownCards[3])
+        self.assertNotIn(2, ai.knownCards[3])
+
 
 if __name__ == "__main__":
     unittest.main()
