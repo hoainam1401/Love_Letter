@@ -1,0 +1,25 @@
+header {
+    height: 100px;
+    width: 1000px;
+    background-color: white;
+    position: sticky;
+    top: 0;
+    display: flex;
+    text-align: center;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.home-logo {
+    height: 80px;
+}
+
+.left-block {
+    display: flex;
+    align-items: center;
+    height: 50px;
+}
+
+.log-block {
+    height: 50px;
+}
