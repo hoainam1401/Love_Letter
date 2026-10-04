@@ -8,6 +8,7 @@ import pygame
 WIDTH = 1000
 HEIGHT = 1000
 FPS = 60
+EFFECT_TIME_SCALE = 1.75
 
 INK = (38, 27, 47)
 BACKGROUND = (245, 237, 224)
@@ -206,19 +207,19 @@ class GameEffects:
     def __init__(self):
         self.active = None
         self.startedAt = 0
-        self.durationMs = self.DURATIONS["NORMAL"]
+        self.durationMs = int(self.DURATIONS["NORMAL"] * EFFECT_TIME_SCALE)
         self.queue = []
 
     def reset(self):
         self.active = None
         self.startedAt = 0
-        self.durationMs = self.DURATIONS["NORMAL"]
+        self.durationMs = int(self.DURATIONS["NORMAL"] * EFFECT_TIME_SCALE)
         self.queue = []
 
     def trigger(self, event, speed="NORMAL"):
         baseDuration = self.DURATIONS.get(speed, self.DURATIONS["NORMAL"])
         multiplier = self.DURATION_MULTIPLIERS.get(event["cardName"], 1.0)
-        queuedEvent = (event, int(baseDuration * multiplier))
+        queuedEvent = (event, int(baseDuration * multiplier * EFFECT_TIME_SCALE))
         if self.active is None:
             self.active, self.durationMs = queuedEvent
             self.startedAt = pygame.time.get_ticks()
@@ -858,7 +859,9 @@ def draw_game_screen(
             fill, border = GAME_PURPLE, GAME_PINK
 
         if status == "Protected":
-            pulse = (math.sin(pygame.time.get_ticks() / 180) + 1) / 2
+            pulse = (
+                math.sin(pygame.time.get_ticks() / (180 * EFFECT_TIME_SCALE)) + 1
+            ) / 2
             for ring in range(3):
                 shieldSize = 16 + ring * 10 + pulse * 5
                 shieldRect = rect.inflate(shieldSize, shieldSize)
@@ -958,7 +961,13 @@ def draw_game_screen(
                 )
                 if hovered or selected:
                     glowSize = 8 + int(
-                        3 * (math.sin(pygame.time.get_ticks() / 120) + 1)
+                        3
+                        * (
+                            math.sin(
+                                pygame.time.get_ticks() / (120 * EFFECT_TIME_SCALE)
+                            )
+                            + 1
+                        )
                     )
                     pygame.draw.rect(
                         WIN,
@@ -1076,7 +1085,7 @@ class GameEndScreen:
     def draw(self, view):
         if self.startedAt is None:
             self.start(view)
-        elapsed = pygame.time.get_ticks() - self.startedAt
+        elapsed = (pygame.time.get_ticks() - self.startedAt) / EFFECT_TIME_SCALE
         revealStart = 350
         revealInterval = 400
         revealDuration = 300
