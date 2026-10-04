@@ -28,21 +28,32 @@ class GameInstance:
     # count of currently chosen "Player"
     # chosenPlayerCount = 0
     def resetTable(self):
+        previousWinnerIndexes = getattr(self, "winnerIndexes", [])
         self.playerCount = len(self.playerList)
         self.alivePlayerCount = len(self.playerList)
         for player in self.playerList:
             player.resetPlayer()
         self.cardPile = CardPile()
-        self.currPlayerIndex = random.choice(range(self.playerCount))
+        self.reservedCard = self.cardPile.draw()
+        self.removedCards = []
+        if self.playerCount == 2:
+            self.removedCards = [self.cardPile.draw() for _ in range(3)]
+        self.currPlayerIndex = (
+            random.choice(previousWinnerIndexes)
+            if previousWinnerIndexes
+            else random.choice(range(self.playerCount))
+        )
         self.currPlayer = self.playerList[self.currPlayerIndex]
         self.deal()
-        self.printPlayerHands()
         self.gameState = "WAITING_FOR_CARD"
         self.selectedCardIndex = -1
         self.selectedTargetIndex = -1
         self.selectedGuess = -1
         self.valid = 0
+        self.lastForcedDiscard = None
         self.winners = []
+        self.winnerIndexes = []
+        self.roundResolved = False
 
     def __init__(self, nameList: list[str]):
         print("----------------------------------------")
@@ -183,7 +194,9 @@ class GameInstance:
 
     def executeCardPlay(self):
         """Execute the play with all collected information"""
-        if self.valid > 0:
+        card = self.currPlayer.hand[self.selectedCardIndex]
+        needsTarget = self.cardNeedsTarget(card) or self.cardNeedsGuess(card)
+        if self.valid > 0 or not needsTarget:
             self.play(
                 self.selectedCardIndex, self.selectedTargetIndex, self.selectedGuess
             )
@@ -205,9 +218,13 @@ class GameInstance:
             # Don't auto-restart - let the UI handle it
 
     def isEndGame(self):
+        if self.roundResolved:
+            return True
+
         self.winners = []
+        self.winnerIndexes = []
         # Check if game should end
-        game_over = self.alivePlayerCount == 1 or self.remainingCount() < 2
+        game_over = self.alivePlayerCount == 1 or self.remainingCount() == 0
 
         if not game_over:
             return False
@@ -215,9 +232,10 @@ class GameInstance:
         # Determine winners
         # winner is the sole survivor
         if self.alivePlayerCount == 1:
-            for player in self.playerList:
+            for index, player in enumerate(self.playerList):
                 if not player.isKO:
-                    self.winners = [player.name]
+                    self.winnerIndexes = [index]
+                    break
         # calculate who has the highest score (when deck runs out)
         else:
             max_val = 0
@@ -230,24 +248,26 @@ class GameInstance:
                     max_val = player.hand[0].val
 
             # Find all players with the max value
-            for player in self.playerList:
+            for index, player in enumerate(self.playerList):
                 if (
                     not player.isKO
                     and len(player.hand) > 0
                     and player.hand[0].val == max_val
                 ):
-                    self.winners.append(player.name)
+                    self.winnerIndexes.append(index)
 
         # Award tokens to winners
-        for player in self.playerList:
-            if player.name in self.winners:
-                player.winningTokenCount += 1
+        self.winners = [self.playerList[index].name for index in self.winnerIndexes]
+        for index in self.winnerIndexes:
+            self.playerList[index].winningTokenCount += 1
+        self.roundResolved = True
 
         return True
 
     # play a card with extra parameters, provide infomations
     # to execute card actions correctly
     def play(self, playedCardPosition: int, chosenPlayerPosition: int, guessedNum: int):
+        self.lastForcedDiscard = None
         playedCard: Card = self.currPlayer.hand[playedCardPosition]
         self.currPlayer.discard(playedCard)
         # Print appropriate message based on card type
@@ -285,8 +305,13 @@ class GameInstance:
             self.KO(self.currPlayer)
 
     def draw(self, player: Player):
-        drawnCard = self.cardPile.draw()
-        print(f"\nPlayer {player.name} has drawn {drawnCard.name}")
+        if self.cardPile.cardList:
+            drawnCard = self.cardPile.draw()
+        elif self.reservedCard is not None:
+            drawnCard = self.reservedCard
+            self.reservedCard = None
+        else:
+            return
         player.hand.append(drawnCard)
         player.syncHandFlags()
 
@@ -296,7 +321,6 @@ class GameInstance:
         for player in self.playerList:
             self.draw(player)
         self.draw(self.currPlayer)
-        # self.printPlayerHands()
 
     def nextPlayer(self):
         self.currPlayerIndex = (self.currPlayerIndex + 1) % self.playerCount
@@ -306,7 +330,6 @@ class GameInstance:
             self.currPlayer = self.playerList[self.currPlayerIndex]
         self.currPlayer.isProtected = False
         self.draw(self.currPlayer)
-        self.printPlayerHands()
         self.gameState = "WAITING_FOR_CARD"
 
     def award(self, player: Player):
@@ -318,13 +341,6 @@ class GameInstance:
         for player in self.playerList:
             s += player.name + ", "
         print(s)
-
-    def printPlayerHands(self):
-        print("Player hands are:")
-        for index, player in enumerate(self.playerList):
-            protected = "(is protected)" if player.isProtected else ""
-            ko = "(is KO)" if player.isKO else ""
-            print(f"({index+1}) {player.name} has {player.showCards()}{protected}{ko}")
 
     def remainingCount(self):
         return len(self.cardPile.cardList)
@@ -343,7 +359,7 @@ class GameInstance:
     # for Priest Card
     # peek another player's hand
     def peekHand(self, chosenPlayer: Player):
-        print(f"{chosenPlayer.name} has the card {chosenPlayer.hand[0].name}")
+        return chosenPlayer.hand[0]
 
     # for Baron Card
     # compare current player's card with another player
@@ -364,11 +380,13 @@ class GameInstance:
     # choose a player (including self) to discard
     # their card and draw a new one
     def discard(self, chosenPlayer: Player):
-        isKO = chosenPlayer.discard(chosenPlayer.hand[0])
-        if not chosenPlayer.isKO:
-            self.draw(chosenPlayer)
-        else:
+        discardedCard = chosenPlayer.hand[0]
+        self.lastForcedDiscard = discardedCard.name
+        chosenPlayer.discard(discardedCard)
+        if discardedCard.name == "Princess":
             self.KO(chosenPlayer)
+        else:
+            self.draw(chosenPlayer)
 
     # for King Card
     # current player swaps hand with another player
@@ -381,7 +399,11 @@ class GameInstance:
 
     # for Princess Card and other KO cards
     def KO(self, chosenPlayer: Player):
+        if chosenPlayer.isKO:
+            return
         chosenPlayer.isKO = True
+        for card in chosenPlayer.hand.copy():
+            chosenPlayer.discard(card)
         print(f"Player {chosenPlayer.name} is out of the round!")
         self.alivePlayerCount -= 1
 

@@ -193,7 +193,15 @@ class GameLog:
 
 
 class GameEffects:
-    DURATIONS = {"SLOW": 700, "NORMAL": 520, "FAST": 250}
+    DURATIONS = {"SLOW": 1050, "NORMAL": 760, "FAST": 380}
+    DURATION_MULTIPLIERS = {
+        "Guard": 1.25,
+        "Priest": 1.8,
+        "Baron": 1.35,
+        "Prince": 1.85,
+        "King": 1.8,
+        "Princess": 1.4,
+    }
 
     def __init__(self):
         self.active = None
@@ -208,7 +216,9 @@ class GameEffects:
         self.queue = []
 
     def trigger(self, event, speed="NORMAL"):
-        queuedEvent = (event, self.DURATIONS.get(speed, self.DURATIONS["NORMAL"]))
+        baseDuration = self.DURATIONS.get(speed, self.DURATIONS["NORMAL"])
+        multiplier = self.DURATION_MULTIPLIERS.get(event["cardName"], 1.0)
+        queuedEvent = (event, int(baseDuration * multiplier))
         if self.active is None:
             self.active, self.durationMs = queuedEvent
             self.startedAt = pygame.time.get_ticks()
@@ -247,9 +257,9 @@ class GameEffects:
         if self.active is None or self.active.get("impactIndex") != playerIndex:
             return 0, 0
         progress = self._progress()
-        if progress < 0.32 or progress > 0.82:
+        if progress < 0.38 or progress > 0.92:
             return 0, 0
-        strength = 1.0 - abs(progress - 0.57) / 0.25
+        strength = 1.0 - abs(progress - 0.65) / 0.27
         offset = int(math.sin(progress * 85) * 10 * strength)
         return offset, 0
 
@@ -258,12 +268,172 @@ class GameEffects:
         if self.active is None or self.active.get("impactIndex") != playerIndex:
             return None
         progress = self._progress()
-        if not 0.28 <= progress <= 0.78:
+        if not 0.32 <= progress <= 0.9:
             return None
         pulse = int(100 + 155 * abs(math.sin(progress * 28)))
         if self.active.get("knockedOut"):
             return (*GAME_RED, pulse)
         return (*GAME_YELLOW, pulse)
+
+    def _playerCenter(self, playerIndex):
+        return pygame.Rect(*PLAYER_POSITIONS[playerIndex], 200, 180).center
+
+    def _lerp(self, start, end, progress):
+        eased = 1 - (1 - max(0.0, min(1.0, progress))) ** 3
+        return (
+            start[0] + (end[0] - start[0]) * eased,
+            start[1] + (end[1] - start[1]) * eased,
+        )
+
+    def _drawCard(self, cardName, center, scale=1.0, alpha=255, angle=0):
+        image = CARD_IMAGES.get(cardName, CARD_IMAGES["Back"])
+        transformed = pygame.transform.rotozoom(image, angle, scale)
+        transformed.set_alpha(max(0, min(255, alpha)))
+        rect = transformed.get_rect(center=(int(center[0]), int(center[1])))
+        WIN.blit(transformed, rect)
+        border = pygame.Surface(rect.size, pygame.SRCALPHA)
+        pygame.draw.rect(
+            border,
+            (*GAME_PINK, max(0, min(255, alpha))),
+            border.get_rect(),
+            3,
+            border_radius=10,
+        )
+        WIN.blit(border, rect)
+        return rect
+
+    def _drawKnockout(self, progress):
+        if not self.active.get("knockedOut") or progress < 0.5:
+            return
+        fadeIn = min(1.0, (progress - 0.5) / 0.16)
+        for playerIndex in self.active.get("knockedOutIndexes", []):
+            center = self._playerCenter(playerIndex)
+            radius = int(48 + 20 * fadeIn)
+            overlay = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            pygame.draw.circle(
+                overlay,
+                (*GAME_RED, int(185 * fadeIn)),
+                (radius, radius),
+                radius,
+            )
+            lineWidth = max(3, int(8 * fadeIn))
+            pygame.draw.line(
+                overlay,
+                (*GAME_TEXT, int(255 * fadeIn)),
+                (radius - 25, radius - 25),
+                (radius + 25, radius + 25),
+                lineWidth,
+            )
+            pygame.draw.line(
+                overlay,
+                (*GAME_TEXT, int(255 * fadeIn)),
+                (radius + 25, radius - 25),
+                (radius - 25, radius + 25),
+                lineWidth,
+            )
+            WIN.blit(overlay, overlay.get_rect(center=center))
+            label = TEXT_FONT.render("KNOCKED OUT", True, GAME_RED)
+            label.set_alpha(int(255 * fadeIn))
+            WIN.blit(label, label.get_rect(center=(center[0], center[1] + 112)))
+
+    def _drawGuard(self, progress, destination):
+        guess = self.active.get("guess")
+        if guess is None or progress < 0.36:
+            return
+        reveal = min(1.0, (progress - 0.36) / 0.16)
+        radius = int(28 + 16 * reveal)
+        badge = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(badge, (*GAME_YELLOW, 235), (radius, radius), radius)
+        pygame.draw.circle(badge, GAME_PINK, (radius, radius), radius, 4)
+        number = HEADING_FONT.render(str(guess), True, GAME_BACKGROUND)
+        badge.blit(number, number.get_rect(center=(radius, radius)))
+        WIN.blit(
+            badge,
+            badge.get_rect(center=(destination[0], destination[1] - 125)),
+        )
+        _center_text(
+            f"GUESS: {guess}",
+            SMALL_FONT,
+            GAME_YELLOW,
+            (destination[0], destination[1] - 176),
+        )
+
+    def _drawPriest(self, progress, destination):
+        revealCard = self.active.get("revealCard")
+        if revealCard is None or progress < 0.38:
+            return
+        flip = min(1.0, (progress - 0.38) / 0.48)
+        imageName = "Back" if flip < 0.5 else revealCard
+        widthScale = max(0.04, abs(1 - flip * 2))
+        image = pygame.transform.smoothscale(
+            CARD_IMAGES[imageName],
+            (max(2, int(CARD_WIDTH * widthScale)), CARD_HEIGHT),
+        )
+        rect = image.get_rect(center=destination)
+        WIN.blit(image, rect)
+        pygame.draw.rect(WIN, GAME_CYAN, rect, 4, border_radius=10)
+        if flip >= 0.5:
+            _center_text(
+                f"REVEALED: {revealCard.upper()}",
+                SMALL_FONT,
+                GAME_CYAN,
+                (destination[0], destination[1] - 112),
+            )
+
+    def _drawPrince(self, progress, destination):
+        discardedCard = self.active.get("discardedCard")
+        if discardedCard is not None and progress >= 0.34:
+            discardProgress = min(1.0, (progress - 0.34) / 0.34)
+            discardCenter = (
+                destination[0] + discardProgress * 85,
+                destination[1] + discardProgress * 120,
+            )
+            self._drawCard(
+                discardedCard,
+                discardCenter,
+                0.72,
+                int(255 * (1 - discardProgress)),
+                -35 * discardProgress,
+            )
+
+        drawnCard = self.active.get("drawnCard")
+        if drawnCard is not None and progress >= 0.56:
+            drawProgress = min(1.0, (progress - 0.56) / 0.35)
+            drawCenter = self._lerp((WIDTH // 2, 525), destination, drawProgress)
+            visibleCard = drawnCard if self.active.get("targetIndex") == 0 else "Back"
+            self._drawCard(visibleCard, drawCenter, 0.72, 255, 8 * (1 - drawProgress))
+            _center_text(
+                "DRAW NEW CARD",
+                SMALL_FONT,
+                GAME_CYAN,
+                (destination[0], destination[1] - 112),
+            )
+
+    def _drawKing(self, progress, actorCenter, destination):
+        if progress < 0.4:
+            return
+        swapProgress = min(1.0, (progress - 0.4) / 0.46)
+        showFaces = self.active.get("showSwapFaces")
+        actorCard = self.active.get("heldCard") if showFaces else "Back"
+        targetCard = self.active.get("targetCard") if showFaces else "Back"
+        actorToTarget = self._lerp(actorCenter, destination, swapProgress)
+        targetToActor = self._lerp(destination, actorCenter, swapProgress)
+        arc = math.sin(swapProgress * math.pi) * 72
+        self._drawCard(
+            actorCard or "Back",
+            (actorToTarget[0], actorToTarget[1] - arc),
+            0.62,
+            255,
+            15 * (1 - swapProgress),
+        )
+        self._drawCard(
+            targetCard or "Back",
+            (targetToActor[0], targetToActor[1] + arc),
+            0.62,
+            255,
+            -15 * (1 - swapProgress),
+        )
+        _center_text("SWAP", TEXT_FONT, GAME_YELLOW, (WIDTH // 2, HEIGHT // 2))
 
     def draw(self):
         if not self.isBusy():
@@ -271,50 +441,41 @@ class GameEffects:
 
         progress = self._progress()
         actorIndex = self.active["actorIndex"]
-        actorRect = pygame.Rect(*PLAYER_POSITIONS[actorIndex], 200, 180)
-        start = actorRect.center
-        center = (WIDTH // 2, HEIGHT // 2)
+        targetIndex = self.active.get("targetIndex")
+        actorCenter = self._playerCenter(actorIndex)
+        destination = (
+            self._playerCenter(targetIndex)
+            if targetIndex is not None
+            else (WIDTH // 2, HEIGHT // 2)
+        )
 
-        if progress < 0.38:
-            move = progress / 0.38
-            eased = 1 - (1 - move) ** 3
-            x = start[0] + (center[0] - start[0]) * eased
-            y = start[1] + (center[1] - start[1]) * eased
-            scale = 0.75 + 0.45 * eased
-            alpha = 255
-        elif progress < 0.72:
-            pulse = abs(math.sin(progress * 18))
-            x, y = center
-            scale = 1.2 + pulse * 0.08
+        travelProgress = min(1.0, progress / 0.34)
+        cardCenter = self._lerp(actorCenter, destination, travelProgress)
+        if progress < 0.7:
             alpha = 255
         else:
-            fade = (progress - 0.72) / 0.28
-            x, y = center
-            scale = 1.2 - fade * 0.35
-            alpha = int(255 * (1 - fade))
+            alpha = int(255 * (1 - (progress - 0.7) / 0.3))
+        scale = 0.72 + 0.35 * min(1.0, travelProgress)
+        angle = (1 - travelProgress) * 14 * (-1 if actorIndex % 2 else 1)
+        cardRect = self._drawCard(
+            self.active["cardName"], cardCenter, scale, alpha, angle
+        )
+
+        label = TEXT_FONT.render(self.active["cardName"].upper(), True, GAME_YELLOW)
+        label.set_alpha(max(0, alpha))
+        WIN.blit(label, label.get_rect(center=(cardRect.centerx, cardRect.bottom + 24)))
 
         cardName = self.active["cardName"]
-        image = CARD_IMAGES.get(cardName, CARD_IMAGES["Back"])
-        angle = (1 - progress) * 14 * (-1 if actorIndex % 2 else 1)
-        transformed = pygame.transform.rotozoom(image, angle, scale)
-        transformed.set_alpha(alpha)
-        cardRect = transformed.get_rect(center=(int(x), int(y)))
+        if cardName == "Guard":
+            self._drawGuard(progress, destination)
+        elif cardName == "Priest":
+            self._drawPriest(progress, destination)
+        elif cardName == "Prince":
+            self._drawPrince(progress, destination)
+        elif cardName == "King" and targetIndex is not None:
+            self._drawKing(progress, actorCenter, destination)
 
-        glow = pygame.Surface((cardRect.width + 24, cardRect.height + 24), pygame.SRCALPHA)
-        glowAlpha = int(alpha * 0.55)
-        pygame.draw.rect(
-            glow,
-            (*GAME_YELLOW, glowAlpha),
-            glow.get_rect(),
-            5,
-            border_radius=18,
-        )
-        WIN.blit(glow, glow.get_rect(center=cardRect.center))
-        WIN.blit(transformed, cardRect)
-
-        label = TEXT_FONT.render(cardName.upper(), True, GAME_YELLOW)
-        label.set_alpha(alpha)
-        WIN.blit(label, label.get_rect(center=(center[0], cardRect.bottom + 24)))
+        self._drawKnockout(progress)
 
 
 class Button:
@@ -351,11 +512,18 @@ class TextInput:
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            wasActive = self.active
             self.active = self.rect.collidepoint(event.pos)
             if self.active:
                 pygame.key.start_text_input()
+            elif wasActive:
+                pygame.key.stop_text_input()
             return False
         if not self.active:
+            return False
+        if event.type == pygame.TEXTINPUT:
+            value = event.text.upper() if self.uppercase else event.text
+            self.text = (self.text + value)[: self.max_length]
             return False
         if event.type != pygame.KEYDOWN:
             return False
@@ -363,9 +531,6 @@ class TextInput:
             self.text = self.text[:-1]
         elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
             return True
-        elif event.unicode and event.unicode.isprintable():
-            value = event.unicode.upper() if self.uppercase else event.unicode
-            self.text = (self.text + value)[: self.max_length]
         return False
 
     def draw(self):
@@ -671,9 +836,9 @@ def draw_game_screen(
                     CARD_WIDTH,
                     CARD_HEIGHT,
                 )
-                cardRects.append(cardRect)
+                hoverRect = cardRect.inflate(22, 38).move(0, -10)
                 if (
-                    cardRect.collidepoint(mousePos)
+                    hoverRect.collidepoint(mousePos)
                     and view.gameState == "WAITING_FOR_CARD"
                     and not gameEffects.isBusy()
                 ):
@@ -693,6 +858,7 @@ def draw_game_screen(
                 displayRect = transformed.get_rect(
                     center=(cardRect.centerx, cardRect.centery - lift)
                 )
+                cardRects.append(displayRect)
                 pygame.draw.rect(
                     WIN,
                     GAME_SHADOW,
