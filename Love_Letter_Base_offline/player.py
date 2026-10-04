@@ -31,8 +31,14 @@ class Player:
     def discard(self, card: Card):
         self.discardPile.append(card)
         self.hand.remove(card)
+        self.syncHandFlags()
         if card.name == "Princess":
             self.isKO = True
+
+    def syncHandFlags(self):
+        self.hasPrince = sum(card.name == "Prince" for card in self.hand)
+        self.hasKing = sum(card.name == "King" for card in self.hand)
+        self.hasCountess = sum(card.name == "Countess" for card in self.hand)
 
     def showCards(self):
         s = ""

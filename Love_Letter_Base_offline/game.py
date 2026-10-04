@@ -276,28 +276,19 @@ class GameInstance:
         elif playedCard.name == "Handmaid":
             self.protect(self.currPlayer)
         elif playedCard.name == "Prince":
-            self.currPlayer.hasPrince -= 1
             chosenPlayer = self.playerList[chosenPlayerPosition]
             self.discard(chosenPlayer)
         elif playedCard.name == "King":
-            self.currPlayer.hasKing -= 1
             chosenPlayer = self.playerList[chosenPlayerPosition]
             self.swap(self.currPlayer, chosenPlayer)
-        elif playedCard.name == "Countess":
-            self.currPlayer.hasCountess -= 1
         elif playedCard.name == "Princess":
             self.KO(self.currPlayer)
 
     def draw(self, player: Player):
         drawnCard = self.cardPile.draw()
         print(f"\nPlayer {player.name} has drawn {drawnCard.name}")
-        if drawnCard.name == "Prince":
-            player.hasPrince += 1
-        elif drawnCard.name == "King":
-            player.hasKing += 1
-        elif drawnCard.name == "Countess":
-            player.hasCountess += 1
         player.hand.append(drawnCard)
+        player.syncHandFlags()
 
     # After starting game, deal for each player 1 card,
     # the first player gets extra 1 card
@@ -385,6 +376,8 @@ class GameInstance:
         temp = currPlayer.hand.copy()
         currPlayer.hand = chosenPlayer.hand.copy()
         chosenPlayer.hand = temp
+        currPlayer.syncHandFlags()
+        chosenPlayer.syncHandFlags()
 
     # for Princess Card and other KO cards
     def KO(self, chosenPlayer: Player):

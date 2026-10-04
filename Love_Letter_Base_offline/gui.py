@@ -1,3 +1,4 @@
+import math
 import os
 from dataclasses import dataclass
 
@@ -37,6 +38,14 @@ GAME_SHADOW = (0, 0, 0)
 
 CARD_WIDTH = 120
 CARD_HEIGHT = 168
+GAME_LOG_RECT = pygame.Rect(WIDTH // 2 - 245, 100, 490, 88)
+END_GAME_LOG_RECT = pygame.Rect(500, 385, 420, 310)
+PLAYER_POSITIONS = [
+    (WIDTH // 2 - 100, 650),
+    (WIDTH - 250, 380),
+    (WIDTH // 2 - 100, 195),
+    (50, 380),
+]
 
 pygame.init()
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -101,6 +110,211 @@ def _draw_panel(rect, radius=18):
     pygame.draw.rect(WIN, (205, 192, 183), rect.move(8, 8), border_radius=radius)
     pygame.draw.rect(WIN, PANEL, rect, border_radius=radius)
     pygame.draw.rect(WIN, ROSE_LIGHT, rect, 2, border_radius=radius)
+
+
+def _wrap_text(text, font, maxWidth):
+    lines = []
+    currentLine = ""
+    for word in text.split():
+        candidate = f"{currentLine} {word}".strip()
+        if currentLine and font.size(candidate)[0] > maxWidth:
+            lines.append(currentLine)
+            currentLine = word
+        else:
+            currentLine = candidate
+    lines.append(currentLine or " ")
+    return lines
+
+
+class GameLog:
+    def __init__(self, rect):
+        self.rect = pygame.Rect(rect)
+        self.scrollOffset = 0
+        self.lineCount = 0
+
+    def reset(self):
+        self.scrollOffset = 0
+        self.lineCount = 0
+
+    def _lines(self, notifications):
+        maxWidth = self.rect.width - 38
+        lines = []
+        for notification in notifications:
+            lines.extend(_wrap_text(notification, TINY_FONT, maxWidth))
+        return lines
+
+    def handle_event(self, event, notifications, mousePos):
+        if event.type != pygame.MOUSEWHEEL or not self.rect.collidepoint(mousePos):
+            return
+        lines = self._lines(notifications)
+        visibleLines = max(1, (self.rect.height - 31) // 18)
+        maxOffset = max(0, len(lines) - visibleLines)
+        self.scrollOffset = max(
+            0, min(maxOffset, self.scrollOffset + event.y * 3)
+        )
+
+    def draw(self, notifications):
+        pygame.draw.rect(WIN, GAME_SHADOW, self.rect.move(4, 4), border_radius=10)
+        pygame.draw.rect(WIN, GAME_PANEL, self.rect, border_radius=10)
+        pygame.draw.rect(WIN, GAME_CYAN, self.rect, 2, border_radius=10)
+
+        title = TINY_FONT.render("GAME LOG - MOUSE WHEEL", True, GAME_CYAN)
+        WIN.blit(title, (self.rect.x + 12, self.rect.y + 8))
+
+        lines = self._lines(notifications)
+        if self.scrollOffset and len(lines) > self.lineCount:
+            self.scrollOffset += len(lines) - self.lineCount
+        self.lineCount = len(lines)
+
+        visibleLines = max(1, (self.rect.height - 31) // 18)
+        maxOffset = max(0, len(lines) - visibleLines)
+        self.scrollOffset = max(0, min(maxOffset, self.scrollOffset))
+        endIndex = len(lines) - self.scrollOffset
+        startIndex = max(0, endIndex - visibleLines)
+        for lineIndex, text in enumerate(lines[startIndex:endIndex]):
+            rendered = TINY_FONT.render(text, True, GAME_TEXT)
+            WIN.blit(
+                rendered,
+                (self.rect.x + 12, self.rect.y + 29 + lineIndex * 18),
+            )
+
+        if maxOffset:
+            track = pygame.Rect(self.rect.right - 13, self.rect.y + 29, 5, self.rect.height - 38)
+            pygame.draw.rect(WIN, GAME_MUTED, track, border_radius=3)
+            thumbHeight = max(12, track.height * visibleLines // len(lines))
+            thumbTravel = track.height - thumbHeight
+            thumbY = track.y + thumbTravel * (maxOffset - self.scrollOffset) // maxOffset
+            pygame.draw.rect(
+                WIN,
+                GAME_CYAN,
+                (track.x, thumbY, track.width, thumbHeight),
+                border_radius=3,
+            )
+
+
+class GameEffects:
+    DURATIONS = {"SLOW": 700, "NORMAL": 520, "FAST": 250}
+
+    def __init__(self):
+        self.active = None
+        self.startedAt = 0
+        self.durationMs = self.DURATIONS["NORMAL"]
+        self.queue = []
+
+    def reset(self):
+        self.active = None
+        self.startedAt = 0
+        self.durationMs = self.DURATIONS["NORMAL"]
+        self.queue = []
+
+    def trigger(self, event, speed="NORMAL"):
+        queuedEvent = (event, self.DURATIONS.get(speed, self.DURATIONS["NORMAL"]))
+        if self.active is None:
+            self.active, self.durationMs = queuedEvent
+            self.startedAt = pygame.time.get_ticks()
+        else:
+            self.queue.append(queuedEvent)
+
+    def _advance(self):
+        if self.active is None:
+            return
+        if pygame.time.get_ticks() - self.startedAt < self.durationMs:
+            return
+        if self.queue:
+            self.active, self.durationMs = self.queue.pop(0)
+            self.startedAt = pygame.time.get_ticks()
+        else:
+            self.active = None
+
+    def isBusy(self):
+        self._advance()
+        return self.active is not None
+
+    def currentCardName(self):
+        self._advance()
+        return self.active["cardName"] if self.active is not None else None
+
+    def _progress(self):
+        if self.active is None:
+            return 1.0
+        return min(
+            1.0,
+            (pygame.time.get_ticks() - self.startedAt) / self.durationMs,
+        )
+
+    def playerOffset(self, playerIndex):
+        self._advance()
+        if self.active is None or self.active.get("impactIndex") != playerIndex:
+            return 0, 0
+        progress = self._progress()
+        if progress < 0.32 or progress > 0.82:
+            return 0, 0
+        strength = 1.0 - abs(progress - 0.57) / 0.25
+        offset = int(math.sin(progress * 85) * 10 * strength)
+        return offset, 0
+
+    def targetFlash(self, playerIndex):
+        self._advance()
+        if self.active is None or self.active.get("impactIndex") != playerIndex:
+            return None
+        progress = self._progress()
+        if not 0.28 <= progress <= 0.78:
+            return None
+        pulse = int(100 + 155 * abs(math.sin(progress * 28)))
+        if self.active.get("knockedOut"):
+            return (*GAME_RED, pulse)
+        return (*GAME_YELLOW, pulse)
+
+    def draw(self):
+        if not self.isBusy():
+            return
+
+        progress = self._progress()
+        actorIndex = self.active["actorIndex"]
+        actorRect = pygame.Rect(*PLAYER_POSITIONS[actorIndex], 200, 180)
+        start = actorRect.center
+        center = (WIDTH // 2, HEIGHT // 2)
+
+        if progress < 0.38:
+            move = progress / 0.38
+            eased = 1 - (1 - move) ** 3
+            x = start[0] + (center[0] - start[0]) * eased
+            y = start[1] + (center[1] - start[1]) * eased
+            scale = 0.75 + 0.45 * eased
+            alpha = 255
+        elif progress < 0.72:
+            pulse = abs(math.sin(progress * 18))
+            x, y = center
+            scale = 1.2 + pulse * 0.08
+            alpha = 255
+        else:
+            fade = (progress - 0.72) / 0.28
+            x, y = center
+            scale = 1.2 - fade * 0.35
+            alpha = int(255 * (1 - fade))
+
+        cardName = self.active["cardName"]
+        image = CARD_IMAGES.get(cardName, CARD_IMAGES["Back"])
+        angle = (1 - progress) * 14 * (-1 if actorIndex % 2 else 1)
+        transformed = pygame.transform.rotozoom(image, angle, scale)
+        transformed.set_alpha(alpha)
+        cardRect = transformed.get_rect(center=(int(x), int(y)))
+
+        glow = pygame.Surface((cardRect.width + 24, cardRect.height + 24), pygame.SRCALPHA)
+        glowAlpha = int(alpha * 0.55)
+        pygame.draw.rect(
+            glow,
+            (*GAME_YELLOW, glowAlpha),
+            glow.get_rect(),
+            5,
+            border_radius=18,
+        )
+        WIN.blit(glow, glow.get_rect(center=cardRect.center))
+        WIN.blit(transformed, cardRect)
+
+        label = TEXT_FONT.render(cardName.upper(), True, GAME_YELLOW)
+        label.set_alpha(alpha)
+        WIN.blit(label, label.get_rect(center=(center[0], cardRect.bottom + 24)))
 
 
 class Button:
@@ -288,17 +502,29 @@ class GameView:
     currentPlayer: int
     remainingCards: int
     gameState: str
+    selectedCardIndex: int
     winners: list[str]
     discardPiles: list[list[tuple[str, int]]]
+    finalHands: list[list[str]]
     notifications: list[str]
 
 
-def draw_game_screen(view, mousePos, validTargets, viewingDiscardIndex=None):
+def draw_game_screen(
+    view,
+    mousePos,
+    validTargets,
+    gameLog,
+    aiPaused,
+    aiSpeed,
+    gameEffects,
+    viewingDiscardIndex=None,
+):
     WIN.fill(GAME_BACKGROUND)
     cardRects = []
     playerRects = []
     numberButtons = []
     discardButtons = []
+    aiControlButtons = []
 
     pygame.draw.rect(WIN, GAME_SHADOW, (0, 4, WIDTH, 90))
     pygame.draw.rect(WIN, GAME_PANEL, (0, 0, WIDTH, 88))
@@ -310,16 +536,32 @@ def draw_game_screen(view, mousePos, validTargets, viewingDiscardIndex=None):
     deck = TEXT_FONT.render(f"Deck: {view.remainingCards}", True, GAME_CYAN)
     WIN.blit(deck, (WIDTH - deck.get_width() - 30, 29))
 
-    noticeRect = pygame.Rect(WIDTH // 2 - 245, 100, 490, 88)
-    pygame.draw.rect(WIN, GAME_SHADOW, noticeRect.move(4, 4), border_radius=10)
-    pygame.draw.rect(WIN, GAME_PANEL, noticeRect, border_radius=10)
-    pygame.draw.rect(WIN, GAME_CYAN, noticeRect, 2, border_radius=10)
-    noticeTitle = TINY_FONT.render("GAME LOG", True, GAME_CYAN)
-    WIN.blit(noticeTitle, (noticeRect.x + 12, noticeRect.y + 8))
-    for lineIndex, notification in enumerate(view.notifications[-3:]):
-        text = notification if len(notification) <= 76 else notification[:73] + "..."
-        rendered = TINY_FONT.render(text, True, GAME_TEXT)
-        WIN.blit(rendered, (noticeRect.x + 12, noticeRect.y + 29 + lineIndex * 18))
+    gameLog.draw(view.notifications)
+
+    pauseRect = pygame.Rect(770, 105, 200, 34)
+    pauseColor = GAME_GREEN if aiPaused else GAME_PURPLE
+    pygame.draw.rect(WIN, pauseColor, pauseRect, border_radius=8)
+    pygame.draw.rect(WIN, GAME_PINK, pauseRect, 2, border_radius=8)
+    _center_text(
+        "RESUME AI" if aiPaused else "PAUSE AI",
+        TINY_FONT,
+        GAME_TEXT,
+        pauseRect.center,
+    )
+    aiControlButtons.append(("pause", None, pauseRect))
+
+    for index, speed in enumerate(("SLOW", "NORMAL", "FAST")):
+        speedRect = pygame.Rect(770 + index * 68, 148, 64, 30)
+        speedColor = GAME_CYAN if speed == aiSpeed else GAME_PANEL
+        pygame.draw.rect(WIN, speedColor, speedRect, border_radius=7)
+        pygame.draw.rect(WIN, GAME_PINK, speedRect, 2, border_radius=7)
+        _center_text(
+            speed,
+            TINY_FONT,
+            GAME_BACKGROUND if speed == aiSpeed else GAME_TEXT,
+            speedRect.center,
+        )
+        aiControlButtons.append(("speed", speed, speedRect))
 
     deckX = WIDTH // 2 - CARD_WIDTH // 2
     deckY = 445
@@ -342,14 +584,11 @@ def draw_game_screen(view, mousePos, validTargets, viewingDiscardIndex=None):
             )
         _center_text("DECK", SMALL_FONT, GAME_PURPLE, (WIDTH // 2, deckY + 194))
 
-    positions = [
-        (WIDTH // 2 - 100, 650),
-        (WIDTH - 250, 380),
-        (WIDTH // 2 - 100, 195),
-        (50, 380),
-    ]
     for index, name in enumerate(view.names[:4]):
-        x, y = positions[index]
+        x, y = PLAYER_POSITIONS[index]
+        offsetX, offsetY = gameEffects.playerOffset(index)
+        x += offsetX
+        y += offsetY
         rect = pygame.Rect(x, y, 200, 180)
         status = view.statuses[index]
         isTarget = index in validTargets
@@ -362,6 +601,18 @@ def draw_game_screen(view, mousePos, validTargets, viewingDiscardIndex=None):
         else:
             fill, border = GAME_PURPLE, GAME_PINK
 
+        if status == "Protected":
+            pulse = (math.sin(pygame.time.get_ticks() / 180) + 1) / 2
+            for ring in range(3):
+                shieldSize = 16 + ring * 10 + pulse * 5
+                shieldRect = rect.inflate(shieldSize, shieldSize)
+                shieldColor = (
+                    min(255, GAME_CYAN[0] + ring * 15),
+                    min(255, GAME_CYAN[1] + ring * 5),
+                    255,
+                )
+                pygame.draw.ellipse(WIN, shieldColor, shieldRect, 3)
+
         pygame.draw.rect(WIN, GAME_SHADOW, rect.move(5, 5), border_radius=10)
         pygame.draw.rect(WIN, fill, rect, border_radius=13)
         pygame.draw.rect(
@@ -371,6 +622,11 @@ def draw_game_screen(view, mousePos, validTargets, viewingDiscardIndex=None):
             5 if isTarget and rect.collidepoint(mousePos) else 3,
             13,
         )
+        flashColor = gameEffects.targetFlash(index)
+        if flashColor is not None:
+            flash = pygame.Surface(rect.size, pygame.SRCALPHA)
+            flash.fill(flashColor)
+            WIN.blit(flash, rect)
         if isTarget:
             playerRects.append((index, rect))
 
@@ -419,13 +675,47 @@ def draw_game_screen(view, mousePos, validTargets, viewingDiscardIndex=None):
                 if (
                     cardRect.collidepoint(mousePos)
                     and view.gameState == "WAITING_FOR_CARD"
+                    and not gameEffects.isBusy()
                 ):
-                    pygame.draw.rect(WIN, GAME_YELLOW, cardRect.inflate(10, 10), 4, 13)
-                pygame.draw.rect(WIN, GAME_SHADOW, cardRect.move(4, 4), border_radius=10)
-                WIN.blit(CARD_IMAGES.get(cardName, CARD_IMAGES["Back"]), cardRect)
-                pygame.draw.rect(WIN, GAME_PINK, cardRect, 3, 10)
+                    hovered = True
+                else:
+                    hovered = False
+                selected = cardIndex == view.selectedCardIndex
+                lift = 18 if hovered else 10 if selected else 0
+                scale = 1.08 if hovered else 1.04 if selected else 1.0
+                angle = (
+                    max(-7, min(7, (mousePos[0] - cardRect.centerx) / 10))
+                    if hovered
+                    else 0
+                )
+                image = CARD_IMAGES.get(cardName, CARD_IMAGES["Back"])
+                transformed = pygame.transform.rotozoom(image, -angle, scale)
+                displayRect = transformed.get_rect(
+                    center=(cardRect.centerx, cardRect.centery - lift)
+                )
+                pygame.draw.rect(
+                    WIN,
+                    GAME_SHADOW,
+                    displayRect.move(5, 6),
+                    border_radius=12,
+                )
+                if hovered or selected:
+                    glowSize = 8 + int(
+                        3 * (math.sin(pygame.time.get_ticks() / 120) + 1)
+                    )
+                    pygame.draw.rect(
+                        WIN,
+                        GAME_YELLOW,
+                        displayRect.inflate(glowSize, glowSize),
+                        4,
+                        14,
+                    )
+                WIN.blit(transformed, displayRect)
+                pygame.draw.rect(WIN, GAME_PINK, displayRect, 3, 10)
                 caption = TINY_FONT.render(cardName, True, GAME_CYAN)
-                captionRect = caption.get_rect(center=(cardRect.centerx, cardRect.bottom + 12))
+                captionRect = caption.get_rect(
+                    center=(displayRect.centerx, displayRect.bottom + 12)
+                )
                 WIN.blit(caption, captionRect)
         elif status != "KO":
             cardX = rect.centerx - SMALL_CARD_BACK.get_width() // 2
@@ -484,30 +774,58 @@ def draw_game_screen(view, mousePos, validTargets, viewingDiscardIndex=None):
         "WAITING_FOR_CARD": ("Choose a card", GAME_GREEN),
         "WAITING_FOR_TARGET": ("Choose a player", GAME_ORANGE),
         "WAITING_FOR_GUESS": ("Guess the AI card (2-8)", GAME_CYAN),
-        "AI_TURN": ("AI is thinking...", GAME_TEXT),
+        "AI_TURN": (
+            "AI paused" if aiPaused else "AI is thinking...",
+            GAME_ORANGE if aiPaused else GAME_TEXT,
+        ),
     }
-    prompt, color = prompts.get(view.gameState, ("Waiting...", GAME_TEXT))
+    activeCardName = gameEffects.currentCardName()
+    if activeCardName is not None:
+        prompt, color = (f"{activeCardName} played!", GAME_YELLOW)
+    else:
+        prompt, color = prompts.get(view.gameState, ("Waiting...", GAME_TEXT))
     _center_text(prompt, TEXT_FONT, color, (WIDTH // 2, HEIGHT - 30))
 
     hint = SMALL_FONT.render("ESC: leave room", True, GAME_MUTED)
     WIN.blit(hint, (20, HEIGHT - 30))
+    gameEffects.draw()
     pygame.display.update()
-    return cardRects, playerRects, numberButtons, discardButtons
+    return cardRects, playerRects, numberButtons, discardButtons, aiControlButtons
 
 
 class GameEndScreen:
     def __init__(self):
         self.playAgainButton = Button((WIDTH // 2 - 285, 770, 250, 66), "PLAY AGAIN")
         self.menuButton = Button((WIDTH // 2 + 35, 770, 250, 66), "MAIN MENU")
+        self.gameLog = GameLog(END_GAME_LOG_RECT)
+        self.startedAt = None
 
-    def handle_event(self, event):
+    def handle_event(self, event, view, mousePos):
+        self.gameLog.handle_event(event, view.notifications, mousePos)
         if self.playAgainButton.handle_event(event):
             return "play_again"
         if self.menuButton.handle_event(event):
             return "menu"
         return None
 
+    def reset(self):
+        self.gameLog.reset()
+        self.startedAt = None
+
+    def start(self, view):
+        self.gameLog.reset()
+        self.startedAt = pygame.time.get_ticks()
+
     def draw(self, view):
+        if self.startedAt is None:
+            self.start(view)
+        elapsed = pygame.time.get_ticks() - self.startedAt
+        revealStart = 350
+        revealInterval = 400
+        revealDuration = 300
+        tokenStart = revealStart + len(view.names) * revealInterval + 300
+        tokenDuration = 750
+
         WIN.fill(GAME_BACKGROUND)
         for index in range(24):
             x = (index * 83 + 41) % WIDTH
@@ -527,18 +845,72 @@ class GameEndScreen:
             f"ROOM  {view.roomCode}", TINY_FONT, GAME_MUTED, (WIDTH // 2, 340)
         )
 
-        scorePanel = pygame.Rect(WIDTH // 2 - 285, 385, 570, 310)
+        scorePanel = pygame.Rect(80, 385, 390, 310)
         pygame.draw.rect(WIN, GAME_SHADOW, scorePanel.move(6, 6), border_radius=14)
         pygame.draw.rect(WIN, GAME_PANEL, scorePanel, border_radius=14)
         pygame.draw.rect(WIN, GAME_PINK, scorePanel, 4, border_radius=14)
-        _center_text("FINAL SCORES", TEXT_FONT, GAME_CYAN, (WIDTH // 2, 425))
+        _center_text("FINAL SCORES", TEXT_FONT, GAME_CYAN, (scorePanel.centerx, 425))
         for index, (name, tokens) in enumerate(zip(view.names, view.tokens)):
-            rowY = 480 + index * 48
+            rowY = 468 + index * 53
             color = GAME_YELLOW if name in view.winners else GAME_TEXT
-            scoreText = SMALL_FONT.render(
-                f"{name}: {tokens} token{'s' if tokens != 1 else ''}", True, color
+            tokenDelay = tokenStart + index * 120
+            tokenAwarded = elapsed >= tokenDelay + tokenDuration
+            displayedTokens = (
+                tokens - 1
+                if name in view.winners and not tokenAwarded and tokens > 0
+                else tokens
             )
-            WIN.blit(scoreText, scoreText.get_rect(center=(WIDTH // 2, rowY)))
+            scoreText = SMALL_FONT.render(
+                f"{name}: {displayedTokens} token{'s' if displayedTokens != 1 else ''}",
+                True,
+                color,
+            )
+            WIN.blit(
+                scoreText,
+                scoreText.get_rect(center=(scorePanel.x + 160, rowY)),
+            )
+
+            hand = view.finalHands[index][0] if view.finalHands[index] else None
+            playerRevealAt = revealStart + index * revealInterval
+            revealProgress = max(
+                0.0,
+                min(1.0, (elapsed - playerRevealAt) / revealDuration),
+            )
+            if revealProgress < 0.5:
+                cardImage = CARD_IMAGES["Back"]
+            else:
+                cardImage = CARD_IMAGES.get(hand, CARD_IMAGES["Back"])
+            flipWidth = max(2, int(38 * abs(1 - revealProgress * 2)))
+            miniCard = pygame.transform.smoothscale(cardImage, (flipWidth, 53))
+            miniRect = miniCard.get_rect(center=(scorePanel.right - 45, rowY + 4))
+            WIN.blit(miniCard, miniRect)
+            pygame.draw.rect(WIN, GAME_PINK, miniRect, 2, border_radius=4)
+
+            handLabel = hand if revealProgress >= 1 and hand else "Hidden"
+            handText = TINY_FONT.render(f"Final: {handLabel}", True, GAME_MUTED)
+            WIN.blit(
+                handText,
+                handText.get_rect(center=(scorePanel.x + 160, rowY + 21)),
+            )
+
+            if name in view.winners and tokenDelay <= elapsed < tokenDelay + tokenDuration:
+                progress = (elapsed - tokenDelay) / tokenDuration
+                eased = 1 - (1 - progress) ** 3
+                startX, startY = WIDTH // 2, 315
+                endX, endY = scorePanel.x + 32, rowY
+                tokenX = int(startX + (endX - startX) * eased)
+                tokenY = int(
+                    startY
+                    + (endY - startY) * eased
+                    - math.sin(progress * math.pi) * 80
+                )
+                radius = 18 + int(math.sin(progress * math.pi) * 5)
+                pygame.draw.circle(WIN, GAME_SHADOW, (tokenX + 3, tokenY + 4), radius)
+                pygame.draw.circle(WIN, GAME_YELLOW, (tokenX, tokenY), radius)
+                pygame.draw.circle(WIN, GOLD, (tokenX, tokenY), radius, 4)
+                _center_text("T", SMALL_FONT, GAME_BACKGROUND, (tokenX, tokenY))
+
+        self.gameLog.draw(view.notifications)
 
         self.playAgainButton.draw()
         self.menuButton.draw()
