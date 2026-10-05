@@ -2,8 +2,6 @@
 __pycache__
 .venv
 .vscode
-.buildozer
-bin
 dist
 /build/LoveLetterOffline
 *.spec.bak

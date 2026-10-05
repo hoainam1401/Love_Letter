@@ -1,12 +1,14 @@
-name: Build offline game
+name: Build online game
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - "Love_Letter_Base_offline/**"
-      - ".github/workflows/build-offline-games.yml"
+      - "Love_Letter_Base_online/**"
+      - "Love_Letter_Base_offline/gui.py"
+      - "Love_Letter_Base_offline/images/**"
+      - ".github/workflows/build-online-game.yml"
 
 permissions:
   contents: read
@@ -17,21 +19,21 @@ jobs:
     runs-on: windows-latest
     defaults:
       run:
-        working-directory: Love_Letter_Base_offline
+        working-directory: Love_Letter_Base_online
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: Love_Letter_Base_offline/requirements.txt
+          cache-dependency-path: Love_Letter_Base_online/requirements.txt
       - name: Install packager
         run: python -m pip install -r requirements.txt pyinstaller
       - name: Build executable
-        run: python -m PyInstaller --noconfirm --clean LoveLetterOffline.spec
+        run: python -m PyInstaller --noconfirm --clean LoveLetterOnline.spec
       - uses: actions/upload-artifact@v4
         with:
-          name: LoveLetterOffline-Windows
-          path: Love_Letter_Base_offline/dist/LoveLetterOffline.exe
+          name: LoveLetterOnline-Windows
+          path: Love_Letter_Base_online/dist/LoveLetterOnline.exe
           if-no-files-found: error
           retention-days: 30

@@ -1,126 +1,110 @@
 # Love Letter
 
-A **multiplayer card game** implementation with both local Pygame-based gameplay and network multiplayer support. The project includes a Python backend with Pygame UI and a React/TypeScript frontend for browser-based gameplay.
+A Pygame implementation of Love Letter with two ways to play:
 
-## Technologies
+- **Offline:** play against one to three AI opponents.
+- **Online:** play with two to four people in private rooms.
 
-### Backend
-- **Python** - Game logic and server
-- **Pygame** - Local game UI and rendering
-- **Socket programming** - Network multiplayer
+Windows players can use the packaged `.exe` files without installing Python or opening a terminal.
 
-### Frontend
-- **TypeScript** - Type-safe development
-- **React** - UI components
-- **Vite** - Build tool with fast refresh
-- **SWC** - Fast TypeScript/JSX compilation
+## Play Offline On Windows
 
-## Project Structure
+1. Open the repository's **Actions** tab on GitHub.
+2. Select **Build offline game**.
+3. Open a successful workflow run or choose **Run workflow** to create a new build.
+4. Download the `LoveLetterOffline-Windows` artifact.
+5. Extract the downloaded ZIP file.
+6. Double-click `LoveLetterOffline.exe`.
+7. Enter a player name, choose two to four total players, and click **START GAME**.
 
-```
-Love_Letter/
-├── Love_Letter_Base/     # Python backend
-│   ├── card.py           # Card definitions
-│   ├── card_pile.py      # Deck management
-│   ├── player.py         # Player logic
-│   ├── game.py           # Game logic
-│   ├── main.py           # Local game entry point
-│   ├── server.py         # Network server
-│   ├── client.py         # Network client
-│   └── images/           # Card images
-├── Love_Letter_Frontend/ # React frontend
-│   ├── src/              # React components
-│   └── public/           # Static assets
-└── Plan/                 # Documentation
-```
+The other seats are controlled by AI. No internet connection or game server is required.
 
-## Current Features
+See the [offline game guide](Love_Letter_Base_offline/README.md) for source installation, tests, and local EXE build instructions.
 
-- **Fully playable multiplayer** over LAN network
-- **Core gameplay mechanics** implemented
-- **Turn-based system** with real-time client-server communication
-- **Local Pygame UI** for desktop play
-- **Multiple game modes:**
-  - Local game (single machine)
-  - Network multiplayer (client-server)
+## Play Online On Windows
 
-## How to Run
+### What Players Need
 
-### Backend - Local Game
+Players only need `LoveLetterOnline.exe` and the address of a running Love Letter server.
+
+1. Open the repository's **Actions** tab on GitHub.
+2. Select **Build online game**.
+3. Open a successful workflow run or choose **Run workflow** to create a new build.
+4. Download the `LoveLetterOnline-Windows` artifact.
+5. Extract the downloaded ZIP file.
+6. Double-click `LoveLetterOnline.exe`.
+7. Enter the server address, such as `game.example.com:21011`.
+8. Enter a player name and room code.
+
+The first player clicks **CREATE ROOM**. Other players use the same server address and room code, then click **JOIN ROOM**. When at least two players are listed, the player marked **(HOST)** clicks **START GAME**.
+
+### Start The Online Server
+
+One person must run the server on a computer reachable by every player. A public VPS or a private Tailscale network is recommended for players on different internet connections.
 
 ```bash
-git clone https://github.com/hoainam1401/Love_Letter.git
-cd Love_Letter/Love_Letter_Base
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run local game
-python main.py
-```
-
-### Backend - Network Multiplayer
-
-**Start Server:**
-```bash
-cd Love_Letter/Love_Letter_Base
+cd Love_Letter_Base_online
+python -m pip install -r requirements.txt
 python server.py
 ```
 
-**Connect Clients:**
+The server listens on TCP port `21011`. Keep it running while people play and allow that port through the server firewall.
+
+See the [online game guide](Love_Letter_Base_online/README.md) for LAN, VPS, Tailscale, port forwarding, `tmux`, troubleshooting, and local EXE build instructions.
+
+## Run From Source
+
+Install Python and clone the repository:
+
 ```bash
-cd Love_Letter/Love_Letter_Base
-python client.py
+git clone https://github.com/hoainam1401/Love_Letter.git
+cd Love_Letter
 ```
 
-### Frontend - React Web Interface
+### Offline Game
 
 ```bash
-cd Love_Letter/Love_Letter_Frontend
-
-# Install dependencies
-npm install
-
-# Run development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Lint code
-npm run lint
+cd Love_Letter_Base_offline
+python -m pip install -r requirements.txt
+python main.py
 ```
 
-## Planned Features
+### Online Game
 
-- Complete the **web-based GUI** for browser gameplay
-- Implement **offline mode with AI bots**
-- Finalize **frontend-backend integration**
-- Add **game animations and transitions**
-- Implement **user authentication and matchmaking**
+Start the server:
 
-## Screenshots
+```bash
+cd Love_Letter_Base_online
+python -m pip install -r requirements.txt
+python server.py
+```
 
-![Screenshot 1](Screenshots/img1.png)  
-*Local Pygame interface*
+Start each client from another terminal:
 
-![Screenshot 2](Screenshots/img2.png)  
-*Network multiplayer gameplay*
+```bash
+cd Love_Letter_Base_online
+python main.py
+```
 
-## Development
+Enter the server address in the game window. The default `127.0.0.1:21011` works only when the client and server are on the same computer.
 
-### Code Style
+## Project Structure
 
-**Python (Backend):**
-- camelCase for variables/functions (non-standard convention)
-- PascalCase for classes
-- Type hints at class level
+| Path | Purpose |
+| --- | --- |
+| [`Love_Letter_Base_offline/`](Love_Letter_Base_offline/README.md) | Local Pygame game with AI and Windows packaging |
+| [`Love_Letter_Base_online/`](Love_Letter_Base_online/README.md) | Socket-based Pygame client/server and Windows client packaging |
+| `Love_Letter_Base/` | Separate legacy Pygame/socket implementation |
 
-**TypeScript (Frontend):**
-- Strict TypeScript enabled
-- ESLint with React Hooks rules
-- PascalCase for components, camelCase for functions
+## Development Checks
+
+Run the offline game-rule tests:
+
+```bash
+cd Love_Letter_Base_offline
+python -m unittest test_game.py
+```
 
 ## License
 
-This project is for educational purposes
+This project is for educational purposes.

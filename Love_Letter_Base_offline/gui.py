@@ -646,7 +646,8 @@ class TextInput:
 
 
 class LoginScreen:
-    def __init__(self):
+    def __init__(self, subtitle="Create a private table against the AI", buttonText="CREATE ROOM"):
+        self.subtitle = subtitle
         field_width = 470
         field_x = WIDTH // 2 - field_width // 2
         self.username = TextInput(
@@ -658,7 +659,7 @@ class LoginScreen:
             max_length=12,
             uppercase=True,
         )
-        self.playButton = Button((WIDTH // 2 - 135, 625, 270, 66), "CREATE ROOM")
+        self.playButton = Button((WIDTH // 2 - 135, 625, 270, 66), buttonText)
 
     def handle_event(self, event):
         submit = self.username.handle_event(event)
@@ -680,7 +681,7 @@ class LoginScreen:
         _center_text("LETTER", HEADING_FONT, GOLD, (WIDTH // 2, 225))
         pygame.draw.line(WIN, GOLD, (385, 245), (615, 245), 3)
         _center_text(
-            "Create a private table against the AI",
+            self.subtitle,
             SMALL_FONT,
             MUTED,
             (WIDTH // 2, 292),
@@ -775,6 +776,7 @@ def draw_game_screen(
     aiSpeed,
     gameEffects,
     viewingDiscardIndex=None,
+    onlineMode=False,
 ):
     WIN.fill(GAME_BACKGROUND)
     cardRects = []
@@ -795,30 +797,31 @@ def draw_game_screen(
 
     gameLog.draw(view.notifications)
 
-    pauseRect = pygame.Rect(770, 105, 200, 34)
-    pauseColor = GAME_GREEN if aiPaused else GAME_PURPLE
-    pygame.draw.rect(WIN, pauseColor, pauseRect, border_radius=8)
-    pygame.draw.rect(WIN, GAME_PINK, pauseRect, 2, border_radius=8)
-    _center_text(
-        "RESUME AI" if aiPaused else "PAUSE AI",
-        TINY_FONT,
-        GAME_TEXT,
-        pauseRect.center,
-    )
-    aiControlButtons.append(("pause", None, pauseRect))
-
-    for index, speed in enumerate(("SLOW", "NORMAL", "FAST")):
-        speedRect = pygame.Rect(770 + index * 68, 148, 64, 30)
-        speedColor = GAME_CYAN if speed == aiSpeed else GAME_PANEL
-        pygame.draw.rect(WIN, speedColor, speedRect, border_radius=7)
-        pygame.draw.rect(WIN, GAME_PINK, speedRect, 2, border_radius=7)
+    if not onlineMode:
+        pauseRect = pygame.Rect(770, 105, 200, 34)
+        pauseColor = GAME_GREEN if aiPaused else GAME_PURPLE
+        pygame.draw.rect(WIN, pauseColor, pauseRect, border_radius=8)
+        pygame.draw.rect(WIN, GAME_PINK, pauseRect, 2, border_radius=8)
         _center_text(
-            speed,
+            "RESUME AI" if aiPaused else "PAUSE AI",
             TINY_FONT,
-            GAME_BACKGROUND if speed == aiSpeed else GAME_TEXT,
-            speedRect.center,
+            GAME_TEXT,
+            pauseRect.center,
         )
-        aiControlButtons.append(("speed", speed, speedRect))
+        aiControlButtons.append(("pause", None, pauseRect))
+
+        for index, speed in enumerate(("SLOW", "NORMAL", "FAST")):
+            speedRect = pygame.Rect(770 + index * 68, 148, 64, 30)
+            speedColor = GAME_CYAN if speed == aiSpeed else GAME_PANEL
+            pygame.draw.rect(WIN, speedColor, speedRect, border_radius=7)
+            pygame.draw.rect(WIN, GAME_PINK, speedRect, 2, border_radius=7)
+            _center_text(
+                speed,
+                TINY_FONT,
+                GAME_BACKGROUND if speed == aiSpeed else GAME_TEXT,
+                speedRect.center,
+            )
+            aiControlButtons.append(("speed", speed, speedRect))
 
     deckX = WIDTH // 2 - CARD_WIDTH // 2
     deckY = 445
@@ -1039,7 +1042,11 @@ def draw_game_screen(
     prompts = {
         "WAITING_FOR_CARD": ("Choose a card", GAME_GREEN),
         "WAITING_FOR_TARGET": ("Choose a player", GAME_ORANGE),
-        "WAITING_FOR_GUESS": ("Guess the AI card (2-8)", GAME_CYAN),
+        "WAITING_FOR_GUESS": (
+            "Guess the card (2-8)" if onlineMode else "Guess the AI card (2-8)",
+            GAME_CYAN,
+        ),
+        "WAITING_FOR_TURN": ("Waiting for another player...", GAME_TEXT),
         "AI_TURN": (
             "AI paused" if aiPaused else "AI is thinking...",
             GAME_ORANGE if aiPaused else GAME_TEXT,

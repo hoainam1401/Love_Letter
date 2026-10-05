@@ -183,7 +183,8 @@ class GameInstance:
 
     def executeCardPlay(self):
         """Execute the play with all collected information"""
-        if self.valid > 0:
+        card = self.currPlayer.hand[self.selectedCardIndex]
+        if self.valid > 0 or not (self.cardNeedsTarget(card) or self.cardNeedsGuess(card)):
             self.play(
                 self.selectedCardIndex, self.selectedTargetIndex, self.selectedGuess
             )
