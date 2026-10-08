@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 import pygame
 
-
 WIDTH = 1000
 HEIGHT = 1000
 FPS = 60
@@ -64,13 +63,21 @@ def _load_card_images():
     images = {}
     image_dir = os.path.join(os.path.dirname(__file__), "images")
     names = [
+        "Assassin",
+        "Jester",
         "Guard",
         "Priest",
+        "Cardinal",
         "Baron",
+        "Baroness",
         "Handmaid",
+        "Sycophant",
         "Prince",
+        "Count",
         "King",
+        "Constable",
         "Countess",
+        "Queen",
         "Princess",
         "Back",
     ]
@@ -150,9 +157,7 @@ class GameLog:
         lines = self._lines(notifications)
         visibleLines = max(1, (self.rect.height - 31) // 18)
         maxOffset = max(0, len(lines) - visibleLines)
-        self.scrollOffset = max(
-            0, min(maxOffset, self.scrollOffset + event.y * 3)
-        )
+        self.scrollOffset = max(0, min(maxOffset, self.scrollOffset + event.y * 3))
 
     def draw(self, notifications):
         pygame.draw.rect(WIN, GAME_SHADOW, self.rect.move(4, 4), border_radius=10)
@@ -180,11 +185,15 @@ class GameLog:
             )
 
         if maxOffset:
-            track = pygame.Rect(self.rect.right - 13, self.rect.y + 29, 5, self.rect.height - 38)
+            track = pygame.Rect(
+                self.rect.right - 13, self.rect.y + 29, 5, self.rect.height - 38
+            )
             pygame.draw.rect(WIN, GAME_MUTED, track, border_radius=3)
             thumbHeight = max(12, track.height * visibleLines // len(lines))
             thumbTravel = track.height - thumbHeight
-            thumbY = track.y + thumbTravel * (maxOffset - self.scrollOffset) // maxOffset
+            thumbY = (
+                track.y + thumbTravel * (maxOffset - self.scrollOffset) // maxOffset
+            )
             pygame.draw.rect(
                 WIN,
                 GAME_CYAN,
@@ -437,12 +446,8 @@ class GameEffects:
             operator = ">"
         else:
             operator = "="
-        humanValue = (
-            actorValue if self.active["actorIndex"] == 0 else targetValue
-        )
-        opponentValue = (
-            targetValue if self.active["actorIndex"] == 0 else actorValue
-        )
+        humanValue = actorValue if self.active["actorIndex"] == 0 else targetValue
+        opponentValue = targetValue if self.active["actorIndex"] == 0 else actorValue
         if humanValue > opponentValue:
             operatorColor = GAME_GREEN
         elif humanValue < opponentValue:
@@ -632,7 +637,9 @@ class TextInput:
         display_text = self.text or self.placeholder
         color = INK if self.text else MUTED
         rendered = TEXT_FONT.render(display_text, True, color)
-        WIN.blit(rendered, (self.rect.x + 18, self.rect.centery - rendered.get_height() // 2))
+        WIN.blit(
+            rendered, (self.rect.x + 18, self.rect.centery - rendered.get_height() // 2)
+        )
         if self.active and pygame.time.get_ticks() % 1000 < 500:
             cursor_width = rendered.get_width() if self.text else 0
             cursor_x = self.rect.x + 18 + cursor_width
@@ -646,7 +653,9 @@ class TextInput:
 
 
 class LoginScreen:
-    def __init__(self, subtitle="Create a private table against the AI", buttonText="CREATE ROOM"):
+    def __init__(
+        self, subtitle="Create a private table against the AI", buttonText="CREATE ROOM"
+    ):
         self.subtitle = subtitle
         field_width = 470
         field_x = WIDTH // 2 - field_width // 2
@@ -700,7 +709,9 @@ class PlayerSelectionScreen:
     def __init__(self):
         self.selectedCount = 2
         self.countButtons = {
-            count: Button((WIDTH // 2 - 210 + (count - 2) * 150, 430, 120, 70), str(count))
+            count: Button(
+                (WIDTH // 2 - 210 + (count - 2) * 150, 430, 120, 70), str(count)
+            )
             for count in range(2, 5)
         }
         self.startButton = Button((WIDTH // 2 - 135, 590, 270, 66), "START GAME")
@@ -910,7 +921,9 @@ def draw_game_screen(
         buttonX = rect.right + 8 if rect.x < 100 else rect.x - 58
         discardRect = pygame.Rect(buttonX, rect.y + 10, 50, 50)
         discardButtons.append((index, discardRect))
-        discardColor = GAME_ORANGE if discardRect.collidepoint(mousePos) else GAME_PURPLE
+        discardColor = (
+            GAME_ORANGE if discardRect.collidepoint(mousePos) else GAME_PURPLE
+        )
         pygame.draw.rect(WIN, GAME_SHADOW, discardRect.move(2, 2), border_radius=8)
         pygame.draw.rect(WIN, discardColor, discardRect, border_radius=8)
         pygame.draw.rect(WIN, GAME_PINK, discardRect, 2, border_radius=8)
@@ -922,9 +935,9 @@ def draw_game_screen(
         )
 
         if index == 0:
-            totalWidth = len(view.humanHand) * CARD_WIDTH + max(
-                0, len(view.humanHand) - 1
-            ) * 18
+            totalWidth = (
+                len(view.humanHand) * CARD_WIDTH + max(0, len(view.humanHand) - 1) * 18
+            )
             startX = rect.centerx - totalWidth // 2
             for cardIndex, cardName in enumerate(view.humanHand):
                 cardRect = pygame.Rect(
@@ -1014,12 +1027,18 @@ def draw_game_screen(
             empty = SMALL_FONT.render("No cards played yet", True, GAME_MUTED)
             WIN.blit(empty, (panelRect.x + 14, panelRect.y + 58))
         for cardIndex, (cardName, value) in enumerate(pile[-8:]):
-            cardRect = pygame.Rect(panelRect.x + 14 + cardIndex * 50, panelRect.y + 48, 42, 72)
+            cardRect = pygame.Rect(
+                panelRect.x + 14 + cardIndex * 50, panelRect.y + 48, 42, 72
+            )
             pygame.draw.rect(WIN, GAME_BACKGROUND, cardRect, border_radius=5)
             pygame.draw.rect(WIN, GAME_PINK, cardRect, 2, border_radius=5)
-            _center_text(str(value), SMALL_FONT, GAME_YELLOW, (cardRect.centerx, cardRect.y + 22))
+            _center_text(
+                str(value), SMALL_FONT, GAME_YELLOW, (cardRect.centerx, cardRect.y + 22)
+            )
             shortName = cardName[:5]
-            _center_text(shortName, TINY_FONT, GAME_TEXT, (cardRect.centerx, cardRect.y + 52))
+            _center_text(
+                shortName, TINY_FONT, GAME_TEXT, (cardRect.centerx, cardRect.y + 52)
+            )
 
     if view.gameState == "WAITING_FOR_GUESS":
         buttonWidth = 70
@@ -1114,9 +1133,7 @@ class GameEndScreen:
         if CROWN_IMAGE is not None:
             WIN.blit(CROWN_IMAGE, (winnerRect.left - 68, winnerRect.centery - 27))
             WIN.blit(CROWN_IMAGE, (winnerRect.right + 14, winnerRect.centery - 27))
-        _center_text(
-            f"ROOM  {view.roomCode}", TINY_FONT, GAME_MUTED, (WIDTH // 2, 340)
-        )
+        _center_text(f"ROOM  {view.roomCode}", TINY_FONT, GAME_MUTED, (WIDTH // 2, 340))
 
         scorePanel = pygame.Rect(80, 385, 390, 310)
         pygame.draw.rect(WIN, GAME_SHADOW, scorePanel.move(6, 6), border_radius=14)
@@ -1168,16 +1185,17 @@ class GameEndScreen:
                 handText.get_rect(center=(scorePanel.x + 160, rowY + 21)),
             )
 
-            if name in view.winners and tokenDelay <= elapsed < tokenDelay + tokenDuration:
+            if (
+                name in view.winners
+                and tokenDelay <= elapsed < tokenDelay + tokenDuration
+            ):
                 progress = (elapsed - tokenDelay) / tokenDuration
                 eased = 1 - (1 - progress) ** 3
                 startX, startY = WIDTH // 2, 315
                 endX, endY = scorePanel.x + 32, rowY
                 tokenX = int(startX + (endX - startX) * eased)
                 tokenY = int(
-                    startY
-                    + (endY - startY) * eased
-                    - math.sin(progress * math.pi) * 80
+                    startY + (endY - startY) * eased - math.sin(progress * math.pi) * 80
                 )
                 radius = 18 + int(math.sin(progress * math.pi) * 5)
                 pygame.draw.circle(WIN, GAME_SHADOW, (tokenX + 3, tokenY + 4), radius)
