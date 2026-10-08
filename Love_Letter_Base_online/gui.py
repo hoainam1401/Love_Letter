@@ -2,11 +2,12 @@ import importlib.util
 from pathlib import Path
 import sys
 
-
 if getattr(sys, "frozen", False):
     _source = Path(sys._MEIPASS) / "shared_gui" / "gui.py"
 else:
-    _source = Path(__file__).resolve().parent.parent / "Love_Letter_Base_offline" / "gui.py"
+    _source = (
+        Path(__file__).resolve().parent.parent / "Love_Letter_Base_offline" / "gui.py"
+    )
 _spec = importlib.util.spec_from_file_location("love_letter_offline_gui", _source)
 _gui = importlib.util.module_from_spec(_spec)
 sys.modules[_spec.name] = _gui
@@ -27,7 +28,9 @@ class LoginScreen:
             (fieldX, 350, fieldWidth, 68), "Server address", max_length=100
         )
         self.serverAddress.text = defaultServer
-        self.username = TextInput((fieldX, 460, fieldWidth, 68), "Username", max_length=20)
+        self.username = TextInput(
+            (fieldX, 460, fieldWidth, 68), "Username", max_length=20
+        )
         self.roomCode = TextInput(
             (fieldX, 570, fieldWidth, 68),
             "Room code",
@@ -67,7 +70,9 @@ class LoginScreen:
         _center_text("LOVE", TITLE_FONT, ROSE_DARK, (WIDTH // 2, 137))
         _center_text("LETTER", HEADING_FONT, GOLD, (WIDTH // 2, 185))
         pygame.draw.line(WIN, GOLD, (385, 205), (615, 205), 3)
-        _center_text("Create a table or join by room code", SMALL_FONT, MUTED, (WIDTH // 2, 252))
+        _center_text(
+            "Create a table or join by room code", SMALL_FONT, MUTED, (WIDTH // 2, 252)
+        )
         _center_text("SERVER ADDRESS", TINY_FONT, MUTED, (WIDTH // 2, 330))
         _center_text("PLAYER NAME", TINY_FONT, MUTED, (WIDTH // 2, 440))
         _center_text("ROOM CODE", TINY_FONT, MUTED, (WIDTH // 2, 550))
@@ -104,13 +109,20 @@ class LobbyScreen:
         _center_text("CONNECTED PLAYERS", TEXT_FONT, INK, (WIDTH // 2, 350))
         for index, name in enumerate(names):
             suffix = " (HOST)" if index == 0 else ""
-            _center_text(f"{index + 1}. {name}{suffix}", TEXT_FONT, ROSE_DARK, (WIDTH // 2, 405 + index * 48))
+            _center_text(
+                f"{index + 1}. {name}{suffix}",
+                TEXT_FONT,
+                ROSE_DARK,
+                (WIDTH // 2, 405 + index * 48),
+            )
         if not names:
             _center_text("Connecting...", TEXT_FONT, MUTED, (WIDTH // 2, 455))
         if canStart:
             self.startButton.draw()
         else:
-            _center_text("Waiting for the host to start", SMALL_FONT, MUTED, (WIDTH // 2, 720))
+            _center_text(
+                "Waiting for the host to start", SMALL_FONT, MUTED, (WIDTH // 2, 720)
+            )
         if message:
             _center_text(message, SMALL_FONT, RED, (WIDTH // 2, 790))
         pygame.display.update()

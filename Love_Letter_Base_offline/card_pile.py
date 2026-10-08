@@ -1,7 +1,6 @@
 import random
 from card import Card
 
-
 CARD_COUNTS = {
     "Guard": 5,
     "Priest": 2,
@@ -11,6 +10,26 @@ CARD_COUNTS = {
     "King": 1,
     "Countess": 1,
     "Princess": 1,
+}
+
+CARD_COUNTS_EXT = {
+    "Assassin": 1,
+    "Jester": 1,
+    "Guard": 5,
+    "Priest": 2,
+    "Cardinal": 2,
+    "Baron": 2,
+    "Baroness": 2,
+    "Handmaid": 2,
+    "Sycophant": 2,
+    "Prince": 1,
+    "Count": 1,
+    "King": 1,
+    "Constable": 1,
+    "Countess": 1,
+    "Queen": 1,
+    "Princess": 1,
+    "Bishop": 1,
 }
 
 
@@ -25,9 +44,13 @@ class CardPile:
         self.cardList = []
         # Available in extended game
         # guardCount = Guard.maxAvailable if playerCount >= 5 else Guard.maxAvailableLess
-        # for i in range(guardCount):
 
-        for name, count in CARD_COUNTS.items():
+        # Standard
+        # for name, count in CARD_COUNTS.items():
+        #     self.cardList.extend(Card(name) for _ in range(count))
+
+        # Extended
+        for name, count in CARD_COUNTS_EXT.items():
             self.cardList.extend(Card(name) for _ in range(count))
         random.shuffle(self.cardList)
         # print("Card pile initiated:")

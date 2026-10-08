@@ -99,7 +99,7 @@ def cardNeedsTarget(cardName: str) -> bool:
         "Sycophant",
         "Prince",
         "King",
-        "Dowager Queen",
+        "Queen",
     ]
     return cardName in target_cards
 

@@ -10,6 +10,9 @@ class Player:
     hasPrince: int
     hasKing: int
     hasCountess: int
+    hasAssassin: bool
+    hasCount: int
+    hasConstable: bool
     finalPoint: int
     winningTokenCount: int
 
@@ -21,6 +24,9 @@ class Player:
         self.hasPrince: int = 0
         self.hasKing: int = 0
         self.hasCountess: int = 0
+        self.hasAssassin: bool = False
+        self.hasCount: int = 0
+        self.hasConstable: bool = False
         self.finalPoint: int = 0
 
     def __init__(self, name: str):

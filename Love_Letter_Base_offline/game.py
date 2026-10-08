@@ -18,10 +18,10 @@ class GameInstance:
     selectedGuess: int
     valid: int  # track number of valid targets
     winners: list[str]  # list of winner names
-
+    sycophantForced: Player  # the "Player" that must be targeted in the next round
+    # contains 2 players, the first is the betting one
+    jesterPair: list[Player]
     # these are avaiable in extended edition
-    # jesterPair: tuple
-    # sycophantForced: Player  # the "Player" that must be targeted in the next round
 
     # choose up to 2 "Player" at a time
     # maxPlayersChosen = 0
@@ -77,14 +77,13 @@ class GameInstance:
     def cardNeedsTarget(self, card: Card) -> bool:
         """Check if a card requires selecting a target player"""
         target_cards = [
-            "Assassin",
             "Jester",
             "Priest",
             "Baron",
             "Sycophant",
             "Prince",
             "King",
-            "Dowager Queen",
+            "Queen",
         ]
         return card.name in target_cards
 
@@ -350,16 +349,24 @@ class GameInstance:
     # for Guard Card
     # guess another player's card, if correct,
     # that player is knocked out of the round
-    def eliminate(self, chosenPlayer: Player, guessedNum: int):
-        if guessedNum == chosenPlayer.hand[0].val:
+    def eliminate(self, currPlayer: Player, chosenPlayer: Player, guessedNum: int):
+        # if the chosen player has Assassin, the guessing one is KO out of the round
+        if chosenPlayer.hand[0].name == "Assassin":
+            self.KO(currPlayer)
+        elif guessedNum == chosenPlayer.hand[0].val:
             self.KO(chosenPlayer)
         else:
             print("Guess not correct!")
 
-    # for Priest Card
+    # for Priest and Baroness Card
     # peek another player's hand
-    def peekHand(self, chosenPlayer: Player):
-        return chosenPlayer.hand[0]
+    def peekHand(self, chosenPlayer1: Player, chosenPlayer2: Player):
+        # if the played card is Priest
+        if chosenPlayer2 is None:
+            return chosenPlayer1.hand[0]
+        # if the played card is Baroness
+        else:
+            return [chosenPlayer1.hand, chosenPlayer2.hand]
 
     # for Baron Card
     # compare current player's card with another player
@@ -388,14 +395,14 @@ class GameInstance:
         else:
             self.draw(chosenPlayer)
 
-    # for King Card
-    # current player swaps hand with another player
-    def swap(self, currPlayer: Player, chosenPlayer: Player):
-        temp = currPlayer.hand.copy()
-        currPlayer.hand = chosenPlayer.hand.copy()
-        chosenPlayer.hand = temp
-        currPlayer.syncHandFlags()
-        chosenPlayer.syncHandFlags()
+    # for Cardinal and King Card
+    # swaps hand of two players
+    def swap(self, chosenPlayer1: Player, chosenPlayer2: Player):
+        temp = chosenPlayer1.hand.copy()
+        chosenPlayer1.hand = chosenPlayer2.hand.copy()
+        chosenPlayer2.hand = temp
+        chosenPlayer1.syncHandFlags()
+        chosenPlayer2.syncHandFlags()
 
     # for Princess Card and other KO cards
     def KO(self, chosenPlayer: Player):
@@ -406,6 +413,47 @@ class GameInstance:
             chosenPlayer.discard(card)
         print(f"Player {chosenPlayer.name} is out of the round!")
         self.alivePlayerCount -= 1
+
+    # for Jester Card
+    # bets on the winning player
+    def bet(self, currPlayer: Player, chosenPlayer: Player):
+        self.jesterPair = [currPlayer, chosenPlayer]
+
+    # for Sycophant Card
+    # forces a player to be chosen next turn
+    def force(self, chosenPlayer: Player):
+        self.sycophantForced = chosenPlayer
+
+    # for Count Card
+    # increases final point by 1 at the end of the game
+    def bonus(self, currPlayer: Player):
+        currPlayer.hasCount += 1
+
+    # for Constable Card
+    # if player is knocked out with this card played, gain a winning token
+    def insure(self, currPlayer: Player):
+        currPlayer.hasConstable = True
+
+    # for Queen Card
+    # compare current player's card with another player
+    # player with higher card is out (reversed comparing)
+    def compare_rev(self, currPlayer: Player, chosenPlayer: Player):
+        if currPlayer.hand[0].val > chosenPlayer.hand[0].val:
+            self.KO(currPlayer)
+        elif currPlayer.hand[0].val < chosenPlayer.hand[0].val:
+            self.KO(chosenPlayer)
+
+    # for Bishop Card
+    # guess another player's card, if correct,
+    # current player gains a winning token,
+    # whether the guess was correct or not,
+    # that player can choose to get a new card
+    # by discarding the current card in hand
+    def guess(self, currPlayer: Player, chosenPlayer: Player, guessedNum: int):
+        if guessedNum == chosenPlayer.hand[0].val:
+            currPlayer.winningTokenCount += 1
+        else:
+            print("Guess not correct!")
 
 
 # play test
