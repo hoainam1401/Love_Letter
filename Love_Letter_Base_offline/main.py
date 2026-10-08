@@ -1,9 +1,8 @@
 import asyncio
+import random
 
 import pygame
 
-from ai import AiController
-from card import CARD_VALUES
 from game import GameInstance
 from gui import (
     FPS,
@@ -17,13 +16,42 @@ from gui import (
     draw_game_screen,
 )
 
-
 SCREEN_LOGIN = "LOGIN"
 SCREEN_PLAYER_SELECT = "PLAYER_SELECT"
 SCREEN_GAME = "GAME"
 SCREEN_GAME_END = "GAME_END"
 HUMAN_INDEX = 0
-AI_SPEEDS = {"SLOW": 3000, "NORMAL": 2000, "FAST": 1000}
+AI_SPEEDS = {"SLOW": 1400, "NORMAL": 700, "FAST": 250}
+CARD_COUNTS = {
+    "Guard": 5,
+    "Priest": 2,
+    "Baron": 2,
+    "Handmaid": 2,
+    "Prince": 2,
+    "King": 1,
+    "Countess": 1,
+    "Princess": 1,
+}
+CARD_COUNTS_EXT = {
+    "Assassin": 1,
+    "Jester": 1,
+    "Guard": 5,
+    "Priest": 2,
+    "Cardinal": 2,
+    "Baron": 2,
+    "Baroness": 2,
+    "Handmaid": 2,
+    "Sycophant": 2,
+    "Prince": 2,
+    "Count": 2,
+    "King": 1,
+    "Constable": 1,
+    "Countess": 1,
+    "Queen": 1,
+    "Princess": 1,
+    "Bishop": 1,
+}
+CARD_VALUES = {name: value for value, name in enumerate(CARD_COUNTS, start=1)}
 
 
 class LocalRoomGame:
@@ -31,32 +59,22 @@ class LocalRoomGame:
         self.username = username
         self.roomCode = roomCode
         self.playerCount = playerCount
-        aiNames = []
-        for index in range(1, playerCount):
-            name = f"AI Player {index}"
-            aiNames.append(f"{name} (Bot)" if name == username else name)
-        names = [username] + aiNames
+        names = [username] + [f"AI Player {index}" for index in range(1, playerCount)]
         self.game = GameInstance(names)
-        self.ai = AiController(playerCount)
         self.aiSpeed = "NORMAL"
         self.aiPaused = False
+        self.aiKnownCards = {index: {} for index in range(1, playerCount)}
         self.nextAiMoveAt = pygame.time.get_ticks() + AI_SPEEDS[self.aiSpeed]
         self.notifications = [f"Room {roomCode} created. Waiting for the first turn."]
-        if self.game.removedCards:
-            removed = ", ".join(card.name for card in self.game.removedCards)
-            self.notifications.append(f"Face-up removed cards: {removed}.")
         self.pendingAction = None
         self.visualEvents = []
 
     def reset(self):
         self.game.resetTable()
         self.aiPaused = False
-        self.ai.reset(self.playerCount)
+        self.aiKnownCards = {index: {} for index in range(1, self.playerCount)}
         self.nextAiMoveAt = pygame.time.get_ticks() + AI_SPEEDS[self.aiSpeed]
         self.notifications = ["A new round has started."]
-        if self.game.removedCards:
-            removed = ", ".join(card.name for card in self.game.removedCards)
-            self.notifications.append(f"Face-up removed cards: {removed}.")
         self.pendingAction = None
         self.visualEvents = []
 
@@ -99,8 +117,7 @@ class LocalRoomGame:
                 for player in self.game.playerList
             ],
             finalHands=[
-                [card.name for card in player.hand]
-                for player in self.game.playerList
+                [card.name for card in player.hand] for player in self.game.playerList
             ],
             notifications=list(self.notifications),
         )
@@ -154,9 +171,7 @@ class LocalRoomGame:
         self.pendingAction = {
             "actor": HUMAN_INDEX,
             "card": cardName,
-            "heldCard": player.hand[1 - cardIndex].name,
             "target": None,
-            "targetCard": None,
             "guess": None,
             "beforeKo": beforeKo,
         }
@@ -178,11 +193,6 @@ class LocalRoomGame:
             self._notify("That player cannot be targeted.")
             return
         self.pendingAction["target"] = playerIndex
-        self.pendingAction["targetCard"] = (
-            self.pendingAction["heldCard"]
-            if playerIndex == HUMAN_INDEX
-            else self.game.playerList[playerIndex].hand[0].name
-        )
         self.game.selectTarget(playerIndex)
         if self.game.gameState == "WAITING_FOR_GUESS":
             targetName = self.game.playerList[playerIndex].name
@@ -216,13 +226,11 @@ class LocalRoomGame:
 
         actorIndex = self.game.currPlayerIndex
         if self.game.gameState == "WAITING_FOR_CARD":
-            cardIndex = self.ai.chooseCard(self.game, actorIndex)
+            cardIndex = self._chooseAiCard()
             self.pendingAction = {
                 "actor": actorIndex,
                 "card": self.game.currPlayer.hand[cardIndex].name,
-                "heldCard": self.game.currPlayer.hand[1 - cardIndex].name,
                 "target": None,
-                "targetCard": None,
                 "guess": None,
                 "beforeKo": [player.isKO for player in self.game.playerList],
             }
@@ -235,24 +243,12 @@ class LocalRoomGame:
                 if self.game.isValidTarget(index)
             ]
             if targets:
-                targetIndex = self.ai.chooseTarget(
-                    self.game,
-                    actorIndex,
-                    self.pendingAction["card"],
-                    targets,
-                )
+                targetIndex = self._chooseAiTarget(actorIndex, targets)
                 self.pendingAction["target"] = targetIndex
-                self.pendingAction["targetCard"] = (
-                    self.pendingAction["heldCard"]
-                    if targetIndex == actorIndex
-                    else self.game.playerList[targetIndex].hand[0].name
-                )
                 self.game.selectTarget(targetIndex)
 
         if self.game.gameState == "WAITING_FOR_GUESS":
-            guess = self.ai.chooseGuess(
-                self.game, actorIndex, self.pendingAction["target"]
-            )
+            guess = self._chooseAiGuess(actorIndex, self.pendingAction["target"])
             self.pendingAction["guess"] = guess
             self.game.selectGuess(guess)
 
@@ -260,13 +256,132 @@ class LocalRoomGame:
 
         self._scheduleAi()
 
+    def _chooseAiCard(self):
+        player = self.game.currPlayer
+        if player.hasCountess and (player.hasPrince or player.hasKing):
+            for index, card in enumerate(player.hand):
+                if card.name == "Countess":
+                    return index
+
+        actorIndex = self.game.currPlayerIndex
+        knowledge = self.aiKnownCards[actorIndex]
+        scores = []
+        for index, card in enumerate(player.hand):
+            otherCard = player.hand[1 - index]
+            if card.name == "Princess":
+                score = -100
+            elif card.name == "Handmaid":
+                score = 9
+            elif card.name == "Guard":
+                knownTarget = any(
+                    name != "Guard" and self.game.isValidTarget(targetIndex)
+                    for targetIndex, name in knowledge.items()
+                )
+                score = 12 if knownTarget else 6
+            elif card.name == "Priest":
+                score = 7
+            elif card.name == "Baron":
+                score = 8 if otherCard.val >= 5 else 2
+            elif card.name == "Prince":
+                score = 11 if "Princess" in knowledge.values() else 7
+            elif card.name == "King":
+                score = 8 if otherCard.val <= 3 else 3
+            else:
+                score = 1
+            scores.append(score)
+
+        bestScore = max(scores)
+        choices = [index for index, score in enumerate(scores) if score == bestScore]
+        return random.choice(choices)
+
+    def _chooseAiTarget(self, actorIndex, targets):
+        cardName = self.pendingAction["card"]
+        knowledge = self.aiKnownCards[actorIndex]
+        selectedCardIndex = self.game.selectedCardIndex
+        remainingCard = self.game.currPlayer.hand[1 - selectedCardIndex]
+        scores = {}
+        for targetIndex in targets:
+            knownCard = knowledge.get(targetIndex)
+            score = random.random()
+            if cardName == "Guard" and knownCard not in (None, "Guard"):
+                score += 100
+            elif cardName == "Priest" and knownCard is None:
+                score += 20
+            elif cardName == "Baron" and knownCard is not None:
+                difference = remainingCard.val - CARD_VALUES[knownCard]
+                score += 30 if difference > 0 else -30 if difference < 0 else 0
+            elif cardName == "Prince":
+                if targetIndex == actorIndex:
+                    score -= 25
+                    if remainingCard.name == "Princess":
+                        score -= 100
+                if knownCard == "Princess":
+                    score += 100
+                elif knownCard is not None:
+                    score += CARD_VALUES[knownCard]
+            elif cardName == "King" and knownCard is not None:
+                score += (CARD_VALUES[knownCard] - remainingCard.val) * 5
+            scores[targetIndex] = score
+        return max(scores, key=scores.get)
+
+    def _chooseAiGuess(self, actorIndex, targetIndex):
+        knownCard = self.aiKnownCards[actorIndex].get(targetIndex)
+        if knownCard is not None and knownCard != "Guard":
+            return CARD_VALUES[knownCard]
+
+        remaining = dict(CARD_COUNTS)
+        for player in self.game.playerList:
+            for card in player.discardPile:
+                remaining[card.name] -= 1
+        for card in self.game.currPlayer.hand:
+            remaining[card.name] -= 1
+
+        bestCount = max(remaining[name] for name in remaining if name != "Guard")
+        guesses = [
+            CARD_VALUES[name]
+            for name, count in remaining.items()
+            if name != "Guard" and count == bestCount
+        ]
+        return random.choice(guesses)
+
     def _scheduleAi(self):
         if (
             self.game.gameState != "GAME_ENDED"
             and self.game.currPlayerIndex != HUMAN_INDEX
         ):
-            self.nextAiMoveAt = (
-                pygame.time.get_ticks() + AI_SPEEDS[self.aiSpeed]
+            self.nextAiMoveAt = pygame.time.get_ticks() + AI_SPEEDS[self.aiSpeed]
+
+    def _updateAiKnowledge(self, action):
+        actorIndex = action["actor"]
+        targetIndex = action["target"]
+        cardName = action["card"]
+
+        for knowledge in self.aiKnownCards.values():
+            if cardName == "King":
+                knowledge.pop(actorIndex, None)
+                knowledge.pop(targetIndex, None)
+            elif knowledge.get(actorIndex) == cardName:
+                knowledge.pop(actorIndex, None)
+            if cardName == "Prince":
+                knowledge.pop(targetIndex, None)
+            for playerIndex, player in enumerate(self.game.playerList):
+                if player.isKO:
+                    knowledge.pop(playerIndex, None)
+
+        if actorIndex != HUMAN_INDEX and targetIndex is not None:
+            target = self.game.playerList[targetIndex]
+            if cardName == "Priest" and target.hand:
+                self.aiKnownCards[actorIndex][targetIndex] = target.hand[0].name
+            elif cardName == "King" and target.hand:
+                self.aiKnownCards[actorIndex][targetIndex] = target.hand[0].name
+
+        if (
+            cardName == "King"
+            and targetIndex not in (None, HUMAN_INDEX)
+            and self.game.playerList[actorIndex].hand
+        ):
+            self.aiKnownCards[targetIndex][actorIndex] = (
+                self.game.playerList[actorIndex].hand[0].name
             )
 
     def _finishAction(self):
@@ -277,11 +392,13 @@ class LocalRoomGame:
         cardName = action["card"]
         targetIndex = action["target"]
         guess = action["guess"]
-        actorName = "You" if actorIndex == HUMAN_INDEX else self.game.playerList[actorIndex].name
-        target = self.game.playerList[targetIndex] if targetIndex is not None else None
-        self.ai.observeResolvedAction(
-            self.game, actorIndex, cardName, targetIndex
+        actorName = (
+            "You"
+            if actorIndex == HUMAN_INDEX
+            else self.game.playerList[actorIndex].name
         )
+        target = self.game.playerList[targetIndex] if targetIndex is not None else None
+        self._updateAiKnowledge(action)
         newlyKnockedOutIndexes = [
             index
             for index, player in enumerate(self.game.playerList)
@@ -290,65 +407,15 @@ class LocalRoomGame:
         newlyKnockedOut = [
             self.game.playerList[index].name for index in newlyKnockedOutIndexes
         ]
-        showSwapFaces = (
-            cardName == "King"
-            and targetIndex is not None
-            and HUMAN_INDEX in (actorIndex, targetIndex)
-        )
-        showComparison = (
-            cardName == "Baron"
-            and targetIndex is not None
-            and HUMAN_INDEX in (actorIndex, targetIndex)
-        )
-        showPrivateCards = showSwapFaces or showComparison
         self.visualEvents.append(
             {
                 "cardName": cardName,
                 "actorIndex": actorIndex,
                 "targetIndex": targetIndex,
                 "impactIndex": (
-                    newlyKnockedOutIndexes[0]
-                    if newlyKnockedOutIndexes
-                    else targetIndex
+                    newlyKnockedOutIndexes[0] if newlyKnockedOutIndexes else targetIndex
                 ),
                 "knockedOut": bool(newlyKnockedOut),
-                "knockedOutIndexes": newlyKnockedOutIndexes,
-                "guess": guess,
-                "revealCard": (
-                    action["targetCard"]
-                    if cardName == "Priest" and actorIndex == HUMAN_INDEX
-                    else None
-                ),
-                "discardedCard": (
-                    self.game.lastForcedDiscard if cardName == "Prince" else None
-                ),
-                "drawnCard": (
-                    target.hand[0].name
-                    if cardName == "Prince" and target is not None and target.hand
-                    else None
-                ),
-                "heldCard": (
-                    action["heldCard"]
-                    if cardName not in ("King", "Baron") or showPrivateCards
-                    else None
-                ),
-                "targetCard": (
-                    action["targetCard"]
-                    if cardName not in ("King", "Baron") or showPrivateCards
-                    else None
-                ),
-                "showSwapFaces": showSwapFaces,
-                "showComparison": showComparison,
-                "actorValue": (
-                    CARD_VALUES[action["heldCard"]]
-                    if showComparison and action["heldCard"] is not None
-                    else None
-                ),
-                "targetValue": (
-                    CARD_VALUES[action["targetCard"]]
-                    if showComparison and action["targetCard"] is not None
-                    else None
-                ),
             }
         )
 
@@ -363,8 +430,6 @@ class LocalRoomGame:
                 text += f" {target.name} holds {target.hand[0].name}."
         elif cardName == "Baron" and target is not None:
             text = f"{actorName} compared hands with {target.name}."
-            if actorIndex == HUMAN_INDEX and action["targetCard"]:
-                text += f" {target.name} holds {action['targetCard']}."
             if newlyKnockedOut:
                 text += f" {', '.join(newlyKnockedOut)} was knocked out."
             else:
@@ -372,7 +437,7 @@ class LocalRoomGame:
         elif cardName == "Handmaid":
             text = f"{actorName} played Handmaid and is protected until the next turn."
         elif cardName == "Prince" and target is not None:
-            discarded = self.game.lastForcedDiscard or "a card"
+            discarded = target.discardPile[-1].name if target.discardPile else "a card"
             text = f"{actorName} made {target.name} discard {discarded}."
             if target.name in newlyKnockedOut:
                 text += f" {target.name} was knocked out."
@@ -445,7 +510,6 @@ async def main():
                     screen = SCREEN_LOGIN
                 elif isinstance(selection, int):
                     roomGame = LocalRoomGame(username, roomCode, selection)
-                    viewingDiscardIndex = None
                     gameLog.reset()
                     gameEndScreen.reset()
                     gameEffects.reset()
@@ -454,7 +518,6 @@ async def main():
                 gameLog.handle_event(event, roomGame.notifications, mousePos)
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     roomGame = None
-                    viewingDiscardIndex = None
                     screen = SCREEN_PLAYER_SELECT
                     continue
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -490,7 +553,6 @@ async def main():
                 action = gameEndScreen.handle_event(event, roomGame.view(), mousePos)
                 if action == "play_again":
                     roomGame.reset()
-                    viewingDiscardIndex = None
                     gameLog.reset()
                     gameEndScreen.reset()
                     gameEffects.reset()
@@ -499,7 +561,6 @@ async def main():
                     event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
                 ):
                     roomGame = None
-                    viewingDiscardIndex = None
                     screen = SCREEN_PLAYER_SELECT
 
         if screen == SCREEN_LOGIN:

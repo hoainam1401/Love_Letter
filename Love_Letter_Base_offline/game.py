@@ -265,43 +265,66 @@ class GameInstance:
 
     # play a card with extra parameters, provide infomations
     # to execute card actions correctly
-    def play(self, playedCardPosition: int, chosenPlayerPosition: int, guessedNum: int):
+    def play(
+        self,
+        playedCardPosition: int,
+        chosenPlayer1Position: int,
+        chosenPlayer2Position: int,
+        guessedNum: int,
+    ):
         self.lastForcedDiscard = None
         playedCard: Card = self.currPlayer.hand[playedCardPosition]
         self.currPlayer.discard(playedCard)
+        chosenPlayer1 = self.playerList[chosenPlayer1Position]
+        chosenPlayer2 = self.playerList[chosenPlayer2Position]
         # Print appropriate message based on card type
         if playedCard.name in ["Handmaid", "Countess", "Princess"]:
             print(f"Player {self.currPlayer.name} has played {playedCard.name}")
         elif playedCard.name == "Guard":
-            chosenPlayer = self.playerList[chosenPlayerPosition]
             print(
-                f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer.name} and guessed {guessedNum}"
+                f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer1.name} and guessed {guessedNum}"
             )
         else:
-            chosenPlayer = self.playerList[chosenPlayerPosition]
             print(
-                f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer.name}"
+                f"Player {self.currPlayer.name} has played {playedCard.name} towards {chosenPlayer1.name}"
             )
         # Execute card effect
         if playedCard.name == "Guard":
-            chosenPlayer = self.playerList[chosenPlayerPosition]
-            self.eliminate(chosenPlayer, guessedNum)
+            chosenPlayer1 = self.playerList[chosenPlayer1Position]
+            self.eliminate(chosenPlayer1, guessedNum)
         elif playedCard.name == "Priest":
-            chosenPlayer = self.playerList[chosenPlayerPosition]
-            self.peekHand(chosenPlayer)
+            chosenPlayer1 = self.playerList[chosenPlayer1Position]
+            self.peekHand(chosenPlayer1, None)
         elif playedCard.name == "Baron":
-            chosenPlayer = self.playerList[chosenPlayerPosition]
-            self.compare(self.currPlayer, chosenPlayer)
+            chosenPlayer1 = self.playerList[chosenPlayer1Position]
+            self.compare(self.currPlayer, chosenPlayer1)
         elif playedCard.name == "Handmaid":
             self.protect(self.currPlayer)
         elif playedCard.name == "Prince":
-            chosenPlayer = self.playerList[chosenPlayerPosition]
-            self.discard(chosenPlayer)
+            chosenPlayer1 = self.playerList[chosenPlayer1Position]
+            self.discard(chosenPlayer1)
         elif playedCard.name == "King":
-            chosenPlayer = self.playerList[chosenPlayerPosition]
-            self.swap(self.currPlayer, chosenPlayer)
+            chosenPlayer1 = self.playerList[chosenPlayer1Position]
+            self.swap(self.currPlayer, chosenPlayer1)
         elif playedCard.name == "Princess":
             self.KO(self.currPlayer)
+        elif playedCard.name == "Jester":
+            self.bet(self.currPlayer, chosenPlayer1)
+        elif playedCard.name == "Cardinal":
+            self.swap(chosenPlayer1, chosenPlayer2)
+            # one more step to choose which player to peek their hand
+        elif playedCard.name == "Baroness":
+            self.peekHand(chosenPlayer1, chosenPlayer2)
+        elif playedCard.name == "Sycophant":
+            self.force(chosenPlayer1)
+        elif playedCard.name == "Count":
+            self.bonus(self.currPlayer)
+        elif playedCard.name == "Constable":
+            self.insure(self.currPlayer)
+        elif playedCard.name == "Queen":
+            self.compare_rev(self.currPlayer, chosenPlayer1)
+        elif playedCard.name == "Bishop":
+            self.guess(self.currPlayer, chosenPlayer1)
 
     def draw(self, player: Player):
         if self.cardPile.cardList:
