@@ -15,6 +15,7 @@ class GameInstance:
     # attributes to track playing card
     selectedCardIndex: int
     selectedTargetIndex: int
+    selectedTarget2Index: int
     selectedGuess: int
     valid: int  # track number of valid targets
     winners: list[str]  # list of winner names
@@ -48,6 +49,7 @@ class GameInstance:
         self.gameState = "WAITING_FOR_CARD"
         self.selectedCardIndex = -1
         self.selectedTargetIndex = -1
+        self.selectedTarget2Index = -1
         self.selectedGuess = -1
         self.valid = 0
         self.lastForcedDiscard = None
@@ -114,6 +116,12 @@ class GameInstance:
             return False
         if target.isKO:
             return False
+        if (
+            self.selectedCardIndex >= 0
+            and self.cardNeedsTwoTargets(self.currPlayer.hand[self.selectedCardIndex])
+            and self.selectedTargetIndex == playerIndex
+        ):
+            return False
         if target == self.currPlayer:
             return self.cardSelfAllowed()
         return True
@@ -144,9 +152,12 @@ class GameInstance:
             if self.isValidTarget(i):
                 self.valid += 1
         # Card doesn't need any info or no valid target, play it immediately
+        needsTwoTargets = self.cardNeedsTwoTargets(card)
         if (
-            not self.cardNeedsGuess(card) and not self.cardNeedsTarget(card)
-        ) or self.valid == 0:
+            not self.cardNeedsGuess(card)
+            and not self.cardNeedsTarget(card)
+            and not needsTwoTargets
+        ) or self.valid < (2 if needsTwoTargets else 1):
             self.executeCardPlay()
         else:
             self.gameState = "WAITING_FOR_TARGET"
@@ -163,11 +174,18 @@ class GameInstance:
             print("Invalid target!")
             return
 
-        # Store the selection
-        self.selectedTargetIndex = playerIndex
+        card = self.currPlayer.hand[self.selectedCardIndex]
+        if self.cardNeedsTwoTargets(card) and self.selectedTargetIndex < 0:
+            self.selectedTargetIndex = playerIndex
+            print(f"First target selected for {card.name}. Select another player.")
+            return
+
+        if self.cardNeedsTwoTargets(card):
+            self.selectedTarget2Index = playerIndex
+        else:
+            self.selectedTargetIndex = playerIndex
 
         # Check if we also need a guess
-        card = self.currPlayer.hand[self.selectedCardIndex]
         if self.cardNeedsGuess(card):
             self.gameState = "WAITING_FOR_GUESS"
             print("Now guess a number (2-8)")
@@ -194,10 +212,20 @@ class GameInstance:
     def executeCardPlay(self):
         """Execute the play with all collected information"""
         card = self.currPlayer.hand[self.selectedCardIndex]
-        needsTarget = self.cardNeedsTarget(card) or self.cardNeedsGuess(card)
-        if self.valid > 0 or not needsTarget:
+        needsTarget = (
+            self.cardNeedsTarget(card)
+            or self.cardNeedsTwoTargets(card)
+            or self.cardNeedsGuess(card)
+        )
+        hasRequiredTargets = not needsTarget or self.selectedTargetIndex >= 0
+        if self.cardNeedsTwoTargets(card):
+            hasRequiredTargets = self.selectedTarget2Index >= 0
+        if hasRequiredTargets:
             self.play(
-                self.selectedCardIndex, self.selectedTargetIndex, self.selectedGuess
+                self.selectedCardIndex,
+                self.selectedTargetIndex,
+                self.selectedGuess,
+                self.selectedTarget2Index,
             )
         else:
             self.currPlayer.discard(self.currPlayer.hand[self.selectedCardIndex])
@@ -206,6 +234,7 @@ class GameInstance:
         # Reset selections
         self.selectedCardIndex = -1
         self.selectedTargetIndex = -1
+        self.selectedTarget2Index = -1
         self.selectedGuess = -1
 
         # Move to next player
@@ -269,16 +298,24 @@ class GameInstance:
         self,
         playedCardPosition: int,
         chosenPlayer1Position: int,
-        chosenPlayer2Position: int,
         guessedNum: int,
+        chosenPlayer2Position: int = -1,
     ):
         self.lastForcedDiscard = None
         playedCard: Card = self.currPlayer.hand[playedCardPosition]
         self.currPlayer.discard(playedCard)
-        chosenPlayer1 = self.playerList[chosenPlayer1Position]
-        chosenPlayer2 = self.playerList[chosenPlayer2Position]
+        chosenPlayer1 = (
+            self.playerList[chosenPlayer1Position]
+            if chosenPlayer1Position >= 0
+            else None
+        )
+        chosenPlayer2 = (
+            self.playerList[chosenPlayer2Position]
+            if chosenPlayer2Position >= 0
+            else None
+        )
         # Print appropriate message based on card type
-        if playedCard.name in ["Handmaid", "Countess", "Princess"]:
+        if chosenPlayer1 is None:
             print(f"Player {self.currPlayer.name} has played {playedCard.name}")
         elif playedCard.name == "Guard":
             print(
@@ -290,8 +327,7 @@ class GameInstance:
             )
         # Execute card effect
         if playedCard.name == "Guard":
-            chosenPlayer1 = self.playerList[chosenPlayer1Position]
-            self.eliminate(chosenPlayer1, guessedNum)
+            self.eliminate(self.currPlayer, chosenPlayer1, guessedNum)
         elif playedCard.name == "Priest":
             chosenPlayer1 = self.playerList[chosenPlayer1Position]
             self.peekHand(chosenPlayer1, None)
@@ -324,7 +360,7 @@ class GameInstance:
         elif playedCard.name == "Queen":
             self.compare_rev(self.currPlayer, chosenPlayer1)
         elif playedCard.name == "Bishop":
-            self.guess(self.currPlayer, chosenPlayer1)
+            self.guess(self.currPlayer, chosenPlayer1, guessedNum)
 
     def draw(self, player: Player):
         if self.cardPile.cardList:

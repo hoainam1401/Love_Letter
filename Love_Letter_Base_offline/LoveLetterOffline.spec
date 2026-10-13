@@ -1,16 +1,25 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 offline_images = [
+    "Assassin.png",
     "Back.png",
     "Baron.png",
+    "Baroness.png",
+    "Bishop.png",
+    "Cardinal.png",
+    "Constable.png",
+    "Count.png",
     "Countess.png",
     "crown.png",
     "Guard.png",
     "Handmaid.png",
+    "Jester.png",
     "King.png",
     "Priest.png",
     "Prince.png",
     "Princess.png",
+    "Queen.png",
+    "Sycophant.png",
 ]
 
 a = Analysis(

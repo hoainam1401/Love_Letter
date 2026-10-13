@@ -79,6 +79,7 @@ def _load_card_images():
         "Countess",
         "Queen",
         "Princess",
+        "Bishop",
         "Back",
     ]
     for name in names:
@@ -205,12 +206,23 @@ class GameLog:
 class GameEffects:
     DURATIONS = {"SLOW": 1050, "NORMAL": 760, "FAST": 380}
     DURATION_MULTIPLIERS = {
+        "Assassin": 1.35,
+        "Jester": 1.5,
         "Guard": 1.25,
         "Priest": 1.8,
+        "Cardinal": 1.8,
         "Baron": 1.8,
+        "Baroness": 1.8,
+        "Handmaid": 1.35,
+        "Sycophant": 1.5,
         "Prince": 1.85,
+        "Count": 1.35,
         "King": 1.8,
+        "Constable": 1.35,
+        "Countess": 1.25,
+        "Queen": 1.8,
         "Princess": 1.4,
+        "Bishop": 1.5,
     }
 
     def __init__(self):
@@ -390,7 +402,7 @@ class GameEffects:
                 (destination[0], destination[1] - 112),
             )
 
-    def _drawBaron(self, progress):
+    def _drawBaron(self, progress, reverse=False):
         if not self.active.get("showComparison") or progress < 0.32:
             return
         actorValue = self.active.get("actorValue")
@@ -432,7 +444,7 @@ class GameEffects:
             5 * (1 - reveal),
         )
         _center_text(
-            "HAND COMPARISON",
+            "HIGH CARD LOSES" if reverse else "HAND COMPARISON",
             SMALL_FONT,
             GAME_CYAN,
             (WIDTH // 2, HEIGHT // 2 - 118),
@@ -448,9 +460,15 @@ class GameEffects:
             operator = "="
         humanValue = actorValue if self.active["actorIndex"] == 0 else targetValue
         opponentValue = targetValue if self.active["actorIndex"] == 0 else actorValue
-        if humanValue > opponentValue:
+        humanWins = (
+            humanValue < opponentValue if reverse else humanValue > opponentValue
+        )
+        humanLoses = (
+            humanValue > opponentValue if reverse else humanValue < opponentValue
+        )
+        if humanWins:
             operatorColor = GAME_GREEN
-        elif humanValue < opponentValue:
+        elif humanLoses:
             operatorColor = GAME_RED
         else:
             operatorColor = GAME_YELLOW
@@ -530,6 +548,90 @@ class GameEffects:
         )
         _center_text("SWAP", TEXT_FONT, GAME_YELLOW, (WIDTH // 2, HEIGHT // 2))
 
+    def _drawBadge(self, progress, destination, label, color):
+        if progress < 0.36:
+            return
+        reveal = min(1.0, (progress - 0.36) / 0.2)
+        radius = int(36 + 18 * reveal + math.sin(progress * 24) * 4)
+        badge = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(badge, (*color, int(210 * reveal)), (radius, radius), radius)
+        pygame.draw.circle(badge, GAME_TEXT, (radius, radius), radius, 4)
+        WIN.blit(badge, badge.get_rect(center=destination))
+        rendered = SMALL_FONT.render(label, True, GAME_BACKGROUND)
+        rendered.set_alpha(int(255 * reveal))
+        WIN.blit(rendered, rendered.get_rect(center=destination))
+
+    def _drawLink(self, progress, actorCenter, destination, label, color):
+        if progress < 0.34:
+            return
+        linkProgress = min(1.0, (progress - 0.34) / 0.38)
+        end = self._lerp(actorCenter, destination, linkProgress)
+        pygame.draw.line(WIN, color, actorCenter, end, 7)
+        for step in range(1, 5):
+            point = self._lerp(actorCenter, end, step / 5)
+            pygame.draw.circle(WIN, GAME_TEXT, (int(point[0]), int(point[1])), 5)
+        midpoint = ((actorCenter[0] + end[0]) / 2, (actorCenter[1] + end[1]) / 2)
+        _center_text(label, SMALL_FONT, color, midpoint)
+
+    def _drawCardinal(self, progress):
+        targetIndex = self.active.get("targetIndex")
+        target2Index = self.active.get("target2Index")
+        if targetIndex is None or target2Index is None or progress < 0.36:
+            return
+        firstCenter = self._playerCenter(targetIndex)
+        secondCenter = self._playerCenter(target2Index)
+        swapProgress = min(1.0, (progress - 0.36) / 0.48)
+        arc = math.sin(swapProgress * math.pi) * 68
+        showFaces = self.active.get("showCardinalFaces")
+        firstCard = self.active.get("targetCard") if showFaces else "Back"
+        secondCard = self.active.get("target2Card") if showFaces else "Back"
+        firstToSecond = self._lerp(firstCenter, secondCenter, swapProgress)
+        secondToFirst = self._lerp(secondCenter, firstCenter, swapProgress)
+        self._drawCard(
+            firstCard or "Back",
+            (firstToSecond[0], firstToSecond[1] - arc),
+            0.58,
+        )
+        self._drawCard(
+            secondCard or "Back",
+            (secondToFirst[0], secondToFirst[1] + arc),
+            0.58,
+        )
+        _center_text("SWAP TWO HANDS", SMALL_FONT, GAME_YELLOW, (WIDTH // 2, 475))
+
+    def _drawBaroness(self, progress):
+        revealCards = self.active.get("revealCards", [])
+        if progress < 0.28:
+            return
+        if len(revealCards) != 2 or not all(revealCards):
+            destination = self._playerCenter(self.active["actorIndex"])
+            self._drawBadge(progress, destination, "PEEK x2", GAME_CYAN)
+            return
+        flip = min(1.0, (progress - 0.28) / 0.3)
+        panel = pygame.Surface((540, 320), pygame.SRCALPHA)
+        pygame.draw.rect(panel, (*GAME_BACKGROUND, 235), panel.get_rect(), border_radius=18)
+        pygame.draw.rect(panel, GAME_CYAN, panel.get_rect(), 4, border_radius=18)
+        WIN.blit(panel, panel.get_rect(center=(WIDTH // 2, HEIGHT // 2)))
+        widthScale = max(0.04, abs(1 - flip * 2))
+        for index, cardName in enumerate(revealCards):
+            imageName = "Back" if flip < 0.5 else cardName
+            image = pygame.transform.smoothscale(
+                CARD_IMAGES[imageName],
+                (max(2, int(CARD_WIDTH * widthScale)), CARD_HEIGHT),
+            )
+            center = (WIDTH // 2 - 135 + index * 270, HEIGHT // 2)
+            imageRect = image.get_rect(center=center)
+            WIN.blit(image, imageRect)
+            pygame.draw.rect(WIN, GAME_CYAN, imageRect, 4, border_radius=10)
+            if flip >= 0.5:
+                _center_text(
+                    cardName.upper(),
+                    SMALL_FONT,
+                    GAME_YELLOW,
+                    (center[0], center[1] + CARD_HEIGHT // 2 + 26),
+                )
+        _center_text("TWO HANDS REVEALED", TEXT_FONT, GAME_CYAN, (WIDTH // 2, 370))
+
     def draw(self):
         if not self.isBusy():
             return
@@ -565,12 +667,38 @@ class GameEffects:
             self._drawGuard(progress, destination)
         elif cardName == "Priest":
             self._drawHandReveal(progress, destination)
+        elif cardName == "Cardinal":
+            self._drawCardinal(progress)
         elif cardName == "Baron":
             self._drawBaron(progress)
+        elif cardName == "Baroness":
+            self._drawBaroness(progress)
+        elif cardName == "Handmaid":
+            self._drawBadge(progress, actorCenter, "PROTECTED", GAME_CYAN)
+        elif cardName == "Sycophant" and targetIndex is not None:
+            self._drawLink(progress, actorCenter, destination, "NEXT TARGET", GAME_ORANGE)
         elif cardName == "Prince":
             self._drawPrince(progress, destination)
+        elif cardName == "Count":
+            self._drawBadge(progress, actorCenter, "+1 FINAL", GAME_GREEN)
         elif cardName == "King" and targetIndex is not None:
             self._drawKing(progress, actorCenter, destination)
+        elif cardName == "Constable":
+            self._drawBadge(progress, actorCenter, "INSURED", GAME_CYAN)
+        elif cardName == "Countess":
+            self._drawBadge(progress, actorCenter, "SAFE DISCARD", GAME_PURPLE)
+        elif cardName == "Queen":
+            self._drawBaron(progress, reverse=True)
+        elif cardName == "Princess":
+            self._drawBadge(progress, actorCenter, "SELF KO", GAME_RED)
+        elif cardName == "Bishop":
+            self._drawGuard(progress, destination)
+            if self.active.get("tokenAwarded"):
+                self._drawBadge(progress, actorCenter, "+1 TOKEN", GAME_YELLOW)
+        elif cardName == "Jester" and targetIndex is not None:
+            self._drawLink(progress, actorCenter, destination, "BET", GAME_PINK)
+        elif cardName == "Assassin":
+            self._drawBadge(progress, actorCenter, "AMBUSH", GAME_RED)
 
         self._drawKnockout(progress)
 

@@ -1,9 +1,11 @@
 import unittest
 from contextlib import redirect_stdout
 from io import StringIO
+from pathlib import Path
 
 from ai import AiController
-from card import Card
+from card import CARD_VALUES, Card
+from card_pile import CARD_COUNTS_EXT
 from game import GameInstance
 
 
@@ -28,7 +30,18 @@ class GameRulesTest(unittest.TestCase):
 
         self.assertIsNotNone(game.reservedCard)
         self.assertEqual(len(game.removedCards), 3)
-        self.assertEqual(game.remainingCount(), 9)
+        expectedRemaining = sum(CARD_COUNTS_EXT.values()) - 7
+        self.assertEqual(game.remainingCount(), expectedRemaining)
+
+    def testEveryCardHasAnImage(self):
+        imageDirectory = Path(__file__).parent / "images"
+        missing = [
+            name
+            for name in CARD_VALUES
+            if not (imageDirectory / f"{name}.png").is_file()
+        ]
+
+        self.assertEqual(missing, [])
 
     def testHandmaidStillAppliesWhenNoOpponentCanBeTargeted(self):
         game = self.makeGame()
@@ -83,6 +96,46 @@ class GameRulesTest(unittest.TestCase):
         ai.knownCards[1][2] = "Princess"
 
         self.assertEqual(ai.chooseCard(game, 1), 1)
+
+    def testAiGuessHandlesExtendedCardsInDiscardPile(self):
+        game = self.makeGame(("Human", "AI", "Other"))
+        self.setTurn(game, 1, (("Guard",), ("Guard", "Priest"), ("Princess",)))
+        game.playerList[0].discardPile = [Card("Sycophant"), Card("Cardinal")]
+        ai = AiController(3)
+        ai.knownCards[1][0] = "Bishop"
+
+        guess = ai.chooseGuess(game, 1, 0)
+
+        self.assertIn(guess, range(2, 9))
+
+    def testGuardGuessExecutesWithExtendedPlaySignature(self):
+        game = self.makeGame()
+        self.setTurn(game, 0, (("Guard", "Priest"), ("Baron",)))
+
+        with redirect_stdout(StringIO()):
+            game.selectCard(0)
+            game.selectTarget(1)
+            game.selectGuess(3)
+
+        self.assertTrue(game.playerList[1].isKO)
+
+    def testCardinalCollectsTwoDifferentTargets(self):
+        game = self.makeGame(("Human", "First AI", "Second AI"))
+        self.setTurn(
+            game,
+            0,
+            (("Cardinal", "Guard"), ("Priest",), ("Princess",)),
+        )
+
+        with redirect_stdout(StringIO()):
+            game.selectCard(0)
+            game.selectTarget(1)
+            self.assertEqual(game.gameState, "WAITING_FOR_TARGET")
+            self.assertFalse(game.isValidTarget(1))
+            game.selectTarget(2)
+
+        self.assertEqual(game.playerList[1].hand[0].name, "Princess")
+        self.assertEqual(game.playerList[2].hand[0].name, "Priest")
 
     def testPrinceTracksTheCardDiscardedBeforePrincessKnockout(self):
         game = self.makeGame()

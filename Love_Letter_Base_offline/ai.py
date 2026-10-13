@@ -1,7 +1,7 @@
 import random
 
 from card import CARD_VALUES
-from card_pile import CARD_COUNTS
+from card_pile import CARD_COUNTS_EXT
 
 
 class AiController:
@@ -84,10 +84,10 @@ class AiController:
 
     def chooseGuess(self, game, actorIndex, targetIndex):
         knownCard = self.knownCards[actorIndex].get(targetIndex)
-        if knownCard is not None and knownCard != "Guard":
+        if knownCard is not None and 2 <= CARD_VALUES[knownCard] <= 8:
             return CARD_VALUES[knownCard]
 
-        remaining = dict(CARD_COUNTS)
+        remaining = dict(CARD_COUNTS_EXT)
         for card in game.removedCards:
             remaining[card.name] -= 1
         for player in game.playerList:
@@ -96,11 +96,16 @@ class AiController:
         for card in game.currPlayer.hand:
             remaining[card.name] -= 1
 
-        bestCount = max(remaining[name] for name in remaining if name != "Guard")
+        guessable = {
+            name: count
+            for name, count in remaining.items()
+            if 2 <= CARD_VALUES[name] <= 8
+        }
+        bestCount = max(guessable.values())
         guesses = [
             CARD_VALUES[name]
-            for name, count in remaining.items()
-            if name != "Guard" and count == bestCount
+            for name, count in guessable.items()
+            if count == bestCount
         ]
         return self.rng.choice(guesses)
 
