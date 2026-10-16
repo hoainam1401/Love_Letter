@@ -103,9 +103,7 @@ class AiController:
         }
         bestCount = max(guessable.values())
         guesses = [
-            CARD_VALUES[name]
-            for name, count in guessable.items()
-            if count == bestCount
+            CARD_VALUES[name] for name, count in guessable.items() if count == bestCount
         ]
         return self.rng.choice(guesses)
 
@@ -134,6 +132,6 @@ class AiController:
             and targetIndex not in (None, 0)
             and game.playerList[actorIndex].hand
         ):
-            self.knownCards[targetIndex][actorIndex] = game.playerList[actorIndex].hand[
-                0
-            ].name
+            self.knownCards[targetIndex][actorIndex] = (
+                game.playerList[actorIndex].hand[0].name
+            )

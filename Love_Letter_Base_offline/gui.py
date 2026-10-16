@@ -609,7 +609,9 @@ class GameEffects:
             return
         flip = min(1.0, (progress - 0.28) / 0.3)
         panel = pygame.Surface((540, 320), pygame.SRCALPHA)
-        pygame.draw.rect(panel, (*GAME_BACKGROUND, 235), panel.get_rect(), border_radius=18)
+        pygame.draw.rect(
+            panel, (*GAME_BACKGROUND, 235), panel.get_rect(), border_radius=18
+        )
         pygame.draw.rect(panel, GAME_CYAN, panel.get_rect(), 4, border_radius=18)
         WIN.blit(panel, panel.get_rect(center=(WIDTH // 2, HEIGHT // 2)))
         widthScale = max(0.04, abs(1 - flip * 2))
@@ -676,7 +678,9 @@ class GameEffects:
         elif cardName == "Handmaid":
             self._drawBadge(progress, actorCenter, "PROTECTED", GAME_CYAN)
         elif cardName == "Sycophant" and targetIndex is not None:
-            self._drawLink(progress, actorCenter, destination, "NEXT TARGET", GAME_ORANGE)
+            self._drawLink(
+                progress, actorCenter, destination, "NEXT TARGET", GAME_ORANGE
+            )
         elif cardName == "Prince":
             self._drawPrince(progress, destination)
         elif cardName == "Count":

@@ -358,9 +358,7 @@ class LocalRoomGame:
         }
         bestCount = max(guessable.values())
         guesses = [
-            CARD_VALUES[name]
-            for name, count in guessable.items()
-            if count == bestCount
+            CARD_VALUES[name] for name, count in guessable.items() if count == bestCount
         ]
         return random.choice(guesses)
 
@@ -484,19 +482,15 @@ class LocalRoomGame:
                 ),
                 "heldCard": (
                     action["heldCard"]
-                    if cardName not in ("King", "Baron", "Queen")
-                    or showPrivateCards
+                    if cardName not in ("King", "Baron", "Queen") or showPrivateCards
                     else None
                 ),
                 "targetCard": (
                     action["targetCard"]
-                    if cardName not in ("King", "Baron", "Queen")
-                    or showPrivateCards
+                    if cardName not in ("King", "Baron", "Queen") or showPrivateCards
                     else None
                 ),
-                "target2Card": (
-                    action["target2Card"] if showCardinalFaces else None
-                ),
+                "target2Card": (action["target2Card"] if showCardinalFaces else None),
                 "showSwapFaces": showSwapFaces,
                 "showCardinalFaces": showCardinalFaces,
                 "showComparison": showComparison,
